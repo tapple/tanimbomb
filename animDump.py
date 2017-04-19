@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys
+import argparse
 import struct
 
 # http://stackoverflow.com/questions/442188/readint-readbyte-readstring-etc-in-python
@@ -122,19 +122,22 @@ class KeyframeMotion(object):
             if (joint.locKeyCount > 0): locJointCount += 1
         print '%s: %dR %dL' % (name, rotJointCount, locJointCount)
 
-"""
-print sys.argv
-file = open(sys.argv[1], 'rb')
-anim = KeyframeMotion()
-anim.deserialize(file)
-anim.dump()
-"""
+parser = argparse.ArgumentParser(
+        description='Manipulate Secondlife .anim files')
+parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
+                    help='anim files to dump or process')
+parser.add_argument('--verbose', '-v', action='count')
 
-for arg in sys.argv[1:]:
-    file = open(arg, 'rb')
+args = parser.parse_args()
+
+for file in args.files:
     anim = KeyframeMotion()
     anim.deserialize(file)
-    anim.summarize(arg)
+    anim.summarize(file.name)
+    if (args.verbose > 0):
+        anim.dump()
+
+
 
 
 
