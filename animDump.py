@@ -2,6 +2,7 @@
 
 import argparse
 import struct
+import copy
 
 # http://stackoverflow.com/questions/442188/readint-readbyte-readstring-etc-in-python
 #
@@ -122,13 +123,43 @@ class KeyframeMotion(object):
             if (joint.locKeyCount > 0): locJointCount += 1
         print '%s: %dR %dL' % (name, rotJointCount, locJointCount)
 
+
+def _ensure_value(namespace, name, value):
+    if getattr(namespace, name, None) is None:
+        setattr(namespace, name, value)
+    return getattr(namespace, name)
+
+class AppendNameValuesAction(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=0, **kwargs):
+        super(AppendNameValuesAction, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        #print '%r %r %r' % (namespace, values, option_string)
+        items = copy.copy(_ensure_value(namespace, self.dest, []))
+        items.append([option_string] + values)
+        setattr(namespace, self.dest, items)
+
+
 parser = argparse.ArgumentParser(
         description='Manipulate Secondlife .anim files')
 parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
                     help='anim files to dump or process')
 parser.add_argument('--verbose', '-v', action='count')
+parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
+        nargs='*')
+
+parser.add_argument('--null', action=AppendNameValuesAction, const='null',
+        dest='actions')
+parser.add_argument('--keep-translations', action=AppendNameValuesAction, nargs='*',
+        dest='actions')
+parser.add_argument('--remove-translations', action=AppendNameValuesAction, nargs='*',
+        dest='actions')
 
 args = parser.parse_args()
+
+print args
+
+#import sys; sys.exit();
 
 for file in args.files:
     anim = KeyframeMotion()
