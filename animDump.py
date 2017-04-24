@@ -3,6 +3,7 @@
 import argparse
 import struct
 import copy
+import sys
 
 # http://stackoverflow.com/questions/442188/readint-readbyte-readstring-etc-in-python
 #
@@ -157,16 +158,31 @@ parser.add_argument('--remove-translations', action=AppendNameValuesAction, narg
 
 args = parser.parse_args()
 
-print args
+if (args.verbose >= 2):
+    print args
 
 #import sys; sys.exit();
 
-for file in args.files:
-    anim = KeyframeMotion()
-    anim.deserialize(file)
-    anim.summarize(file.name)
-    if (args.verbose > 0):
-        anim.dump()
+if args.outputfiles is None:
+    # summarize all files
+    for file in args.files:
+        anim = KeyframeMotion()
+        anim.deserialize(file)
+        anim.summarize(file.name)
+        if (args.verbose > 0):
+            anim.dump()
+
+else:
+    # convert files
+    if (len(args.files) != len(args.outputfiles)):
+        print "different number of input and output files"
+        sys.exit();
+    for inputFile,outputFile in zip(args.files, args.outputfiles):
+        anim = KeyframeMotion()
+        anim.deserialize(inputFile)
+        anim.serialize(outputFile)
+
+
 
 
 
