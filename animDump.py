@@ -124,6 +124,44 @@ class KeyframeMotion(object):
             if (joint.locKeyCount > 0): locJointCount += 1
         print '%s: %dR %dL' % (name, rotJointCount, locJointCount)
 
+class AnimTransform(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, anim):
+        pass
+
+class TransformJointsMatching(AnimTransform):
+    def __init__(self, dropGlobs, keepGlobs, jointTransform):
+        self.dropGlobs = dropGlobs
+        self.keepGlobs = keepGlobs
+        self.jointTransform = jointTransform
+
+    def __repr__(self):
+        return "TransformJointsMatching(%r, %r, %r)" % (self.dropGlobs,
+                self.keepGlobs, self.jointTransform)
+
+    def __call__(self, anim):
+        pass
+
+
+
+class JointTransform(object):
+    def __call__(self, anim, joint):
+        pass
+
+class DropLocationKeyframes(JointTransform):
+    def __call__(self, anim, joint):
+        pass
+
+class DropRotationKeyframes(JointTransform):
+    def __call__(self, anim, joint):
+        pass
+
+class DropPriority(JointTransform):
+    def __call__(self, anim, joint):
+        pass
+
 
 def _ensure_value(namespace, name, value):
     if getattr(namespace, name, None) is None:
@@ -141,46 +179,58 @@ class AppendNameValuesAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
-parser = argparse.ArgumentParser(
-        description='Manipulate Secondlife .anim files')
-parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
-                    help='anim files to dump or process')
-parser.add_argument('--verbose', '-v', action='count')
-parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
-        nargs='*')
+if __name__ == '__main__':
 
-parser.add_argument('--null', action=AppendNameValuesAction, const='null',
-        dest='actions')
-parser.add_argument('--keep-translations', action=AppendNameValuesAction, nargs='*',
-        dest='actions')
-parser.add_argument('--remove-translations', action=AppendNameValuesAction, nargs='*',
-        dest='actions')
+    parser = argparse.ArgumentParser(
+            description='Manipulate Secondlife .anim files')
+    parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
+                        help='anim files to dump or process')
+    parser.add_argument('--verbose', '-v', action='count')
+    parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
+            nargs='*')
 
-args = parser.parse_args()
+    parser.add_argument('--null', action=AppendNameValuesAction, const='null',
+            dest='actions')
+    parser.add_argument('--keep-loc', action='append')
+    parser.add_argument('--drop-loc', action='append')
+    parser.add_argument('--keep-rot', action='append')
+    parser.add_argument('--drop-rot', action='append')
+    parser.add_argument('--keep-pri', action='append')
+    parser.add_argument('--drop-pri', action='append')
 
-if (args.verbose >= 2):
-    print args
+    args = parser.parse_args()
+    _ensure_value(args, 'actions', [])
+    if (args.drop_loc): 
+        args.actions.append(TransformJointsMatching(args.drop_loc, 
+                args.keep_loc, DropLocationKeyframes()))
+    if (args.drop_rot): 
+        args.actions.append(TransformJointsMatching(args.drop_rot,
+                args.keep_rot, DropRotationKeyframes()))
+    if (args.drop_pri): 
+        args.actions.append(TransformJointsMatching(args.drop_pri,
+                args.keep_pri, DropPriority()))
 
-#import sys; sys.exit();
+    if (args.verbose >= 2):
+        print args
 
-if args.outputfiles is None:
-    # summarize all files
-    for file in args.files:
-        anim = KeyframeMotion()
-        anim.deserialize(file)
-        anim.summarize(file.name)
-        if (args.verbose > 0):
-            anim.dump()
+    if args.outputfiles is None:
+        # summarize all files
+        for file in args.files:
+            anim = KeyframeMotion()
+            anim.deserialize(file)
+            anim.summarize(file.name)
+            if (args.verbose > 0):
+                anim.dump()
 
-else:
-    # convert files
-    if (len(args.files) != len(args.outputfiles)):
-        print "different number of input and output files"
-        sys.exit();
-    for inputFile,outputFile in zip(args.files, args.outputfiles):
-        anim = KeyframeMotion()
-        anim.deserialize(inputFile)
-        anim.serialize(outputFile)
+    else:
+        # convert files
+        if (len(args.files) != len(args.outputfiles)):
+            print "different number of input and output files"
+            sys.exit();
+        for inputFile,outputFile in zip(args.files, args.outputfiles):
+            anim = KeyframeMotion()
+            anim.deserialize(inputFile)
+            anim.serialize(outputFile)
 
 
 
