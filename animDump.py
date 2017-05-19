@@ -211,7 +211,7 @@ class AddConstraint(AnimTransform):
         self.constraint.targetDirY = 0
         self.constraint.targetDirZ = 0
 
-        self.constraint.easeInStart = 0
+        self.constraint.easeInStart = -1
         self.constraint.easeInStop = 0
         self.constraint.easeOutStart = 10
         self.constraint.easeOutStop = 10
