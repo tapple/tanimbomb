@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import fnmatch
 import struct
 import copy
 import sys
@@ -122,7 +123,8 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeyCount > 0): rotJointCount += 1
             if (joint.locKeyCount > 0): locJointCount += 1
-        print '%s: %dR %dL' % (name, rotJointCount, locJointCount)
+        print '%s: P%d %dR %dL %dC' % (name, self.priority,
+                rotJointCount, locJointCount, len(self.constraints))
 
 class AnimTransform(object):
     def __init__(self):
@@ -131,18 +133,62 @@ class AnimTransform(object):
     def __call__(self, anim):
         pass
 
+class SetAnimProperty(AnimTransform):
+    def __init__(self, value, key):
+        self.value = value
+        self.key = key
+
+    def __call__(self, anim):
+        setattr(anim, self.key, self.value)
+
+
 class TransformJointsMatching(AnimTransform):
-    def __init__(self, dropGlobs, keepGlobs, jointTransform):
-        self.dropGlobs = dropGlobs
-        self.keepGlobs = keepGlobs
-        self.jointTransform = jointTransform
+    def __init__(self, *globs, **kwargs):
+        self.dropGlobs = list()
+        self.keepGlobs = list()
+        for glob in globs:
+            if glob.startswith('+'):
+                self.keepGlobs.append(glob[1:])
+            else:
+                self.dropGlobs.append(glob);
+        self.jointTransform = kwargs['jointTransform']
 
     def __repr__(self):
         return "TransformJointsMatching(%r, %r, %r)" % (self.dropGlobs,
                 self.keepGlobs, self.jointTransform)
 
+    def _shouldDropJointNamed(self, jointName):
+        for dropGlob in self.dropGlobs:
+            if (fnmatch.fnmatch(jointName, dropGlob)):
+                for keepGlob in self.keepGlobs:
+                    if (fnmatch.fnmatch(jointName, keepGlob)):
+                        return False
+                return True
+        return False
+
     def __call__(self, anim):
-        pass
+        # iterate over a copy since joints may be removed
+        for joint in anim.joints[:]:
+            if self._shouldDropJointNamed(joint.name):
+                self.jointTransform(anim, joint)
+
+def dropLocationKeyframes(anim, joint):
+    joint.locKeys = ""
+
+def dropRotationKeyframes(anim, joint):
+    joint.rotKeys = ""
+
+def dropPriority(anim, joint):
+    joint.priority = anim.priority
+
+def dropJoint(anim, joint):
+    anim.joints.remove(joint)
+
+class DropEmptyJoints(AnimTransform):
+    def __call__(self, anim):
+        anim.joints = [joint for joint in anim.joints if
+                (joint.rotKeyCount > 0 or joint.locKeyCount > 0)]
+
 
 
 class AddConstraint(AnimTransform):
@@ -177,21 +223,7 @@ class DropConstraints(AnimTransform):
     def __call__(self, anim):
         anim.constraints = list()
 
-class JointTransform(object):
-    def __call__(self, anim, joint):
-        pass
 
-class DropLocationKeyframes(JointTransform):
-    def __call__(self, anim, joint):
-        pass
-
-class DropRotationKeyframes(JointTransform):
-    def __call__(self, anim, joint):
-        pass
-
-class DropPriority(JointTransform):
-    def __call__(self, anim, joint):
-        pass
 
 
 def _ensure_value(namespace, name, value):
@@ -200,12 +232,36 @@ def _ensure_value(namespace, name, value):
     return getattr(namespace, name)
 
 class AppendObjectAction(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=0, **kwargs):
-        super(AppendObjectAction, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
+    def __init__(self,
+                 option_strings,
+                 dest,
+                 func,
+                 nargs=0,
+                 const=None,
+                 default=None,
+                 type=None,
+                 choices=None,
+                 required=False,
+                 help=None,
+                 metavar=None,
+                 **kwargs):
+        self.func = func
+        self.kwargs = kwargs
+        super(AppendObjectAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            nargs=nargs,
+            const=const,
+            default=default,
+            type=type,
+            choices=choices,
+            required=required,
+            help=help,
+            metavar=metavar)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        #print '%r %r %r' % (namespace, values, option_string)
-        item = self.const(*values)
+        #print '%r %r %r' % (namespace, values, self.kwargs)
+        item = self.func(*values, **self.kwargs)
         items = copy.copy(_ensure_value(namespace, self.dest, []))
         items.append(item)
         setattr(namespace, self.dest, items)
@@ -221,29 +277,38 @@ if __name__ == '__main__':
     parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
             nargs='*')
 
-    parser.add_argument('--keep-loc', action='append')
-    parser.add_argument('--drop-loc', action='append')
-    parser.add_argument('--keep-rot', action='append')
-    parser.add_argument('--drop-rot', action='append')
-    parser.add_argument('--keep-pri', action='append')
-    parser.add_argument('--drop-pri', action='append')
+    parser.add_argument('--pri', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='priority', type=int)
+    parser.add_argument('--ease-in', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='easeIn', type=float)
+    parser.add_argument('--ease-out', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='easeOut', type=float)
+
+    parser.add_argument('--drop-loc', action=AppendObjectAction,
+            dest='actions', func=TransformJointsMatching, nargs='*',
+            jointTransform=dropLocationKeyframes)
+    parser.add_argument('--drop-rot', action=AppendObjectAction,
+            dest='actions', func=TransformJointsMatching, nargs='*',
+            jointTransform=dropRotationKeyframes)
+    parser.add_argument('--drop-pri', action=AppendObjectAction,
+            dest='actions', func=TransformJointsMatching, nargs='*',
+            jointTransform=dropPriority)
+    parser.add_argument('--drop-joint', action=AppendObjectAction,
+            dest='actions', func=TransformJointsMatching, nargs='*',
+            jointTransform=dropJoint)
+    parser.add_argument('--drop-empty-joints', action=AppendObjectAction,
+            dest='actions', func=DropEmptyJoints)
 
     parser.add_argument('--add-constraint', action=AppendObjectAction,
-            dest='actions', const=AddConstraint, nargs=3)
+            dest='actions', func=AddConstraint, nargs=3)
     parser.add_argument('--drop-constraints', action=AppendObjectAction,
-            dest='actions', const=DropConstraints)
+            dest='actions', func=DropConstraints)
 
     args = parser.parse_args()
     _ensure_value(args, 'actions', [])
-    if (args.drop_loc):
-        args.actions.append(TransformJointsMatching(args.drop_loc,
-                args.keep_loc, DropLocationKeyframes()))
-    if (args.drop_rot):
-        args.actions.append(TransformJointsMatching(args.drop_rot,
-                args.keep_rot, DropRotationKeyframes()))
-    if (args.drop_pri):
-        args.actions.append(TransformJointsMatching(args.drop_pri,
-                args.keep_pri, DropPriority()))
 
     if (args.verbose >= 2):
         print args
@@ -268,6 +333,9 @@ if __name__ == '__main__':
             for action in args.actions:
                 action(anim)
             anim.serialize(outputFile)
+            anim.summarize(outputFile.name)
+            if (args.verbose > 0):
+                anim.dump()
 
 
 
