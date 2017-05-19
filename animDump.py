@@ -145,6 +145,12 @@ class TransformJointsMatching(AnimTransform):
         pass
 
 
+class AddConstraint(AnimTransform):
+    def __init__(self, constraint):
+        self.constraint = constraint
+
+    def __call__(self, anim):
+        anim.constraints.append(self.constraint)
 
 class JointTransform(object):
     def __call__(self, anim, joint):
@@ -197,18 +203,44 @@ if __name__ == '__main__':
     parser.add_argument('--drop-rot', action='append')
     parser.add_argument('--keep-pri', action='append')
     parser.add_argument('--drop-pri', action='append')
+    parser.add_argument('--add-constraint', action='store_true')
 
     args = parser.parse_args()
     _ensure_value(args, 'actions', [])
-    if (args.drop_loc): 
-        args.actions.append(TransformJointsMatching(args.drop_loc, 
+    if (args.drop_loc):
+        args.actions.append(TransformJointsMatching(args.drop_loc,
                 args.keep_loc, DropLocationKeyframes()))
-    if (args.drop_rot): 
+    if (args.drop_rot):
         args.actions.append(TransformJointsMatching(args.drop_rot,
                 args.keep_rot, DropRotationKeyframes()))
-    if (args.drop_pri): 
+    if (args.drop_pri):
         args.actions.append(TransformJointsMatching(args.drop_pri,
                 args.keep_pri, DropPriority()))
+    if (args.add_constraint):
+        constraint = JointConstraintSharedData()
+        constraint.chainLength = 2
+        constraint.type = 0 # 0: point, 1: plane
+        constraint.sourceVolume = 'R_HAND'
+
+        constraint.sourceOffsetX = 0
+        constraint.sourceOffsetY = 0
+        constraint.sourceOffsetZ = 0
+
+        constraint.targetVolume = 'BELLY'
+        constraint.targetOffsetX = 0
+        constraint.targetOffsetY = 0
+        constraint.targetOffsetZ = 0
+
+        constraint.targetDirX = 0
+        constraint.targetDirY = 0
+        constraint.targetDirZ = 0
+
+        constraint.easeInStart = 0
+        constraint.easeInStop = 0
+        constraint.easeOutStart = 10
+        constraint.easeOutStop = 10
+
+        args.actions.append(AddConstraint(constraint))
 
     if (args.verbose >= 2):
         print args
@@ -230,6 +262,8 @@ if __name__ == '__main__':
         for inputFile,outputFile in zip(args.files, args.outputfiles):
             anim = KeyframeMotion()
             anim.deserialize(inputFile)
+            for action in args.actions:
+                action(anim)
             anim.serialize(outputFile)
 
 
