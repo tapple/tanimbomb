@@ -146,11 +146,36 @@ class TransformJointsMatching(AnimTransform):
 
 
 class AddConstraint(AnimTransform):
-    def __init__(self, constraint):
-        self.constraint = constraint
+    def __init__(self, sourceVolume, targetVolume, chainLength):
+        self.constraint = JointConstraintSharedData()
+        self.constraint.chainLength = int(chainLength)
+        self.constraint.type = 0 # 0: point, 1: plane
+        self.constraint.sourceVolume = sourceVolume
+
+        self.constraint.sourceOffsetX = 0
+        self.constraint.sourceOffsetY = 0
+        self.constraint.sourceOffsetZ = 0
+
+        self.constraint.targetVolume = targetVolume
+        self.constraint.targetOffsetX = 0
+        self.constraint.targetOffsetY = 0
+        self.constraint.targetOffsetZ = 0
+
+        self.constraint.targetDirX = 0
+        self.constraint.targetDirY = 0
+        self.constraint.targetDirZ = 0
+
+        self.constraint.easeInStart = 0
+        self.constraint.easeInStop = 0
+        self.constraint.easeOutStart = 10
+        self.constraint.easeOutStop = 10
 
     def __call__(self, anim):
         anim.constraints.append(self.constraint)
+
+class DropConstraints(AnimTransform):
+    def __call__(self, anim):
+        anim.constraints = list()
 
 class JointTransform(object):
     def __call__(self, anim, joint):
@@ -174,14 +199,15 @@ def _ensure_value(namespace, name, value):
         setattr(namespace, name, value)
     return getattr(namespace, name)
 
-class AppendNameValuesAction(argparse.Action):
+class AppendObjectAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=0, **kwargs):
-        super(AppendNameValuesAction, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
+        super(AppendObjectAction, self).__init__(option_strings, dest, nargs=nargs, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
         #print '%r %r %r' % (namespace, values, option_string)
+        item = self.const(*values)
         items = copy.copy(_ensure_value(namespace, self.dest, []))
-        items.append([option_string] + values)
+        items.append(item)
         setattr(namespace, self.dest, items)
 
 
@@ -195,15 +221,17 @@ if __name__ == '__main__':
     parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
             nargs='*')
 
-    parser.add_argument('--null', action=AppendNameValuesAction, const='null',
-            dest='actions')
     parser.add_argument('--keep-loc', action='append')
     parser.add_argument('--drop-loc', action='append')
     parser.add_argument('--keep-rot', action='append')
     parser.add_argument('--drop-rot', action='append')
     parser.add_argument('--keep-pri', action='append')
     parser.add_argument('--drop-pri', action='append')
-    parser.add_argument('--add-constraint', action='store_true')
+
+    parser.add_argument('--add-constraint', action=AppendObjectAction,
+            dest='actions', const=AddConstraint, nargs=3)
+    parser.add_argument('--drop-constraints', action=AppendObjectAction,
+            dest='actions', const=DropConstraints)
 
     args = parser.parse_args()
     _ensure_value(args, 'actions', [])
@@ -216,31 +244,6 @@ if __name__ == '__main__':
     if (args.drop_pri):
         args.actions.append(TransformJointsMatching(args.drop_pri,
                 args.keep_pri, DropPriority()))
-    if (args.add_constraint):
-        constraint = JointConstraintSharedData()
-        constraint.chainLength = 2
-        constraint.type = 0 # 0: point, 1: plane
-        constraint.sourceVolume = 'R_HAND'
-
-        constraint.sourceOffsetX = 0
-        constraint.sourceOffsetY = 0
-        constraint.sourceOffsetZ = 0
-
-        constraint.targetVolume = 'BELLY'
-        constraint.targetOffsetX = 0
-        constraint.targetOffsetY = 0
-        constraint.targetOffsetZ = 0
-
-        constraint.targetDirX = 0
-        constraint.targetDirY = 0
-        constraint.targetDirZ = 0
-
-        constraint.easeInStart = 0
-        constraint.easeInStop = 0
-        constraint.easeOutStart = 10
-        constraint.easeOutStop = 10
-
-        args.actions.append(AddConstraint(constraint))
 
     if (args.verbose >= 2):
         print args
