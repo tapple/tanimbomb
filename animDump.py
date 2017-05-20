@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import fnmatch
@@ -29,25 +29,25 @@ class BinaryStream:
         buf = bytearray()
         while True:
             b = self.base_stream.read(1)
-            if b is None or b == '\0':
-                return str(buf)
+            if b is None or b == b'\0':
+                return buf
             else:
-                buf.append(b)
+                buf.extend(b)
 
     def writeCString(self, string):
         self.writeBytes(string)
-        self.writeBytes("\0")
+        self.writeBytes(b"\0")
 
 class JointMotion(object):
     KEY_SIZE = 8
 
     @property
     def rotKeyCount(self):
-        return len(self.rotKeys) / JointMotion.KEY_SIZE
+        return len(self.rotKeys) // JointMotion.KEY_SIZE
 
     @property
     def locKeyCount(self):
-        return len(self.locKeys) / JointMotion.KEY_SIZE
+        return len(self.locKeys) // JointMotion.KEY_SIZE
 
 
 class JointConstraintSharedData(object):
@@ -57,13 +57,13 @@ class KeyframeMotion(object):
     def deserialize(self, file):
         stream = BinaryStream(file)
         (self.version, self.subVersion, self.priority, self.duration) = stream.unpack("HHif")
-        self.emote = stream.readCString()
+        self.emote = stream.readCString().decode('ascii')
         (self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
         self.joints = list()
         for jointNum in range(jointCount):
             joint = JointMotion()
             self.joints.append(joint)
-            joint.name = stream.readCString()
+            joint.name = stream.readCString().decode('ascii')
             (joint.priority, rotKeyCount) = stream.unpack("ii")
             joint.rotKeys = stream.readBytes(rotKeyCount * JointMotion.KEY_SIZE)
             (locKeyCount,) = stream.unpack("i")
@@ -74,18 +74,20 @@ class KeyframeMotion(object):
             constraint = JointConstraintSharedData()
             self.constraints.append(constraint)
             (constraint.chainLength, constraint.type) = stream.unpack("BB")
-            (constraint.sourceVolume, constraint.sourceOffsetX, constraint.sourceOffsetY, constraint.sourceOffsetZ,
-                constraint.targetVolume, constraint.targetOffsetX, constraint.targetOffsetY, constraint.targetOffsetZ,
-                constraint.targetDirX, constraint.targetDirY, constraint.targetDirZ,
-                constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop) = stream.unpack("16s3f16s3f3f4f")
+            constraint.sourceVolume = stream.unpack("16s")[0].decode('ascii')
+            constraint.sourceOffset = stream.unpack("3f")
+            constraint.targetVolume = stream.unpack("16s")[0].decode('ascii')
+            constraint.targetOffset = stream.unpack("3f")
+            constraint.targetDir   = stream.unpack("3f")
+            (constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop) = stream.unpack("4f")
 
     def serialize(self, file):
         stream = BinaryStream(file)
         stream.pack("HHif", self.version, self.subVersion, self.priority, self.duration)
-        stream.writeCString(self.emote)
+        stream.writeCString(self.emote.encode('ascii'))
         stream.pack("ffiffii", self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, len(self.joints))
         for joint in self.joints:
-            stream.writeCString(joint.name)
+            stream.writeCString(joint.name.encode('ascii'))
             stream.pack("ii", joint.priority, joint.rotKeyCount)
             stream.writeBytes(joint.rotKeys)
             stream.pack("i", joint.locKeyCount)
@@ -94,28 +96,29 @@ class KeyframeMotion(object):
         for constraint in self.constraints:
             stream.pack("BB", constraint.chainLength, constraint.type)
             stream.pack("16s3f16s3f3f4f",
-                constraint.sourceVolume, constraint.sourceOffsetX, constraint.sourceOffsetY, constraint.sourceOffsetZ,
-                constraint.targetVolume, constraint.targetOffsetX, constraint.targetOffsetY, constraint.targetOffsetZ,
-                constraint.targetDirX, constraint.targetDirY, constraint.targetDirZ,
+                constraint.sourceVolume.encode('ascii'), *constraint.sourceOffset,
+                constraint.targetVolume.encode('ascii'), *constraint.targetOffset,
+                *constraint.targetDir,
                 constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop)
 
     def dump(self):
-        print "version: %d.%d" % (self.version, self.subVersion)
-        print "priority: %d" % (self.priority,)
-        print "duration: %f" % (self.duration,)
-        print 'emote: "%s"' % (self.emote,)
-        print 'loop: %d (%f - %f)' % (self.loop, self.loopIn, self.loopOut)
-        print 'ease: %f - %f' % (self.easeIn, self.easeOut)
-        print 'joints: %d' % (len(self.joints),)
+        print("version: %d.%d" % (self.version, self.subVersion))
+        print("priority: %d" % (self.priority,))
+        print("duration: %f" % (self.duration,))
+        print('emote: "%s"' % (self.emote,))
+        print('loop: %d (%f - %f)' % (self.loop, self.loopIn, self.loopOut))
+        print('ease: %f - %f' % (self.easeIn, self.easeOut))
+        print('joints: %d' % (len(self.joints),))
         for joint in self.joints:
-            print '\tP%d %dR %dL: %s' % (joint.priority, joint.rotKeyCount, joint.locKeyCount, joint.name)
-        print 'constraints: %d' % (len(self.constraints),)
+            print('\tP%d %dR %dL: %s' % (joint.priority, joint.rotKeyCount, joint.locKeyCount, joint.name))
+        print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
-            print "\tchain: %d type: %d\n\t\t%s + <%f, %f, %f> ->\n\t\t%s + <%f, %f, %f> at <%f, %f, %f>\n\t\tease: %f, %f - %f, %f" % (constraint.chainLength, constraint.type,
-                constraint.sourceVolume, constraint.sourceOffsetX, constraint.sourceOffsetY, constraint.sourceOffsetZ,
-                constraint.targetVolume, constraint.targetOffsetX, constraint.targetOffsetY, constraint.targetOffsetZ,
-                constraint.targetDirX, constraint.targetDirY, constraint.targetDirZ,
-                constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop)
+            print("\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" %
+                (constraint.chainLength, constraint.type,
+                constraint.sourceVolume, constraint.sourceOffset,
+                constraint.targetVolume, constraint.targetOffset,
+                constraint.targetDir,
+                constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop))
 
     def summarize(self, name):
         rotJointCount = 0
@@ -123,8 +126,8 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeyCount > 0): rotJointCount += 1
             if (joint.locKeyCount > 0): locJointCount += 1
-        print '%s: P%d %dR %dL %dC' % (name, self.priority,
-                rotJointCount, locJointCount, len(self.constraints))
+        print('%s: P%d %dR %dL %dC' % (name, self.priority,
+                rotJointCount, locJointCount, len(self.constraints)))
 
 class AnimTransform(object):
     def __init__(self):
@@ -143,7 +146,7 @@ class SetAnimProperty(AnimTransform):
 
 
 class TransformJointsMatching(AnimTransform):
-    def __init__(self, *globs, **kwargs):
+    def __init__(self, *globs, jointTransform):
         self.dropGlobs = list()
         self.keepGlobs = list()
         for glob in globs:
@@ -151,7 +154,7 @@ class TransformJointsMatching(AnimTransform):
                 self.keepGlobs.append(glob[1:])
             else:
                 self.dropGlobs.append(glob);
-        self.jointTransform = kwargs['jointTransform']
+        self.jointTransform = jointTransform
 
     def __repr__(self):
         return "TransformJointsMatching(%r, %r, %r)" % (self.dropGlobs,
@@ -260,7 +263,7 @@ class AppendObjectAction(argparse.Action):
             metavar=metavar)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        #print '%r %r %r' % (namespace, values, self.kwargs)
+        #print('%r %r %r' % (namespace, values, self.kwargs))
         item = self.func(*values, **self.kwargs)
         items = copy.copy(_ensure_value(namespace, self.dest, []))
         items.append(item)
@@ -271,10 +274,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files')
-    parser.add_argument('files', type=argparse.FileType('r'), nargs='+',
+    parser.add_argument('files', type=argparse.FileType('rb'), nargs='+',
                         help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count')
-    parser.add_argument('--outputfiles', '-o', type=argparse.FileType('w'),
+    parser.add_argument('--outputfiles', '-o', type=argparse.FileType('wb'),
             nargs='*')
 
     parser.add_argument('--pri', action=AppendObjectAction,
@@ -311,7 +314,7 @@ if __name__ == '__main__':
     _ensure_value(args, 'actions', [])
 
     if (args.verbose >= 2):
-        print args
+        print(args)
 
     if args.outputfiles is None:
         # summarize all files
@@ -325,7 +328,7 @@ if __name__ == '__main__':
     else:
         # convert files
         if (len(args.files) != len(args.outputfiles)):
-            print "different number of input and output files"
+            print("different number of input and output files")
             sys.exit();
         for inputFile,outputFile in zip(args.files, args.outputfiles):
             anim = KeyframeMotion()
