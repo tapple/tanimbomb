@@ -199,20 +199,13 @@ class AddConstraint(AnimTransform):
         self.constraint = JointConstraintSharedData()
         self.constraint.chainLength = int(chainLength)
         self.constraint.type = 0 # 0: point, 1: plane
-        self.constraint.sourceVolume = sourceVolume
 
-        self.constraint.sourceOffsetX = 0
-        self.constraint.sourceOffsetY = 0
-        self.constraint.sourceOffsetZ = 0
+        self.constraint.sourceVolume = sourceVolume
+        self.constraint.sourceOffset = (0, 0, 0)
 
         self.constraint.targetVolume = targetVolume
-        self.constraint.targetOffsetX = 0
-        self.constraint.targetOffsetY = 0
-        self.constraint.targetOffsetZ = 0
-
-        self.constraint.targetDirX = 0
-        self.constraint.targetDirY = 0
-        self.constraint.targetDirZ = 0
+        self.constraint.targetOffset = (0, 0, 0)
+        self.constraint.targetDir = (0, 0, 0)
 
         self.constraint.easeInStart = -1
         self.constraint.easeInStop = 0
@@ -225,6 +218,53 @@ class AddConstraint(AnimTransform):
 class DropConstraints(AnimTransform):
     def __call__(self, anim):
         anim.constraints = list()
+
+class SetConstraintType(AnimTransform):
+    def __init__(self, constraintType):
+        self.constraintType = constraintType
+
+    def __call__(self, anim):
+        constraint = anim.constraints[-1]
+        constraint.type = self.constraintType
+
+class SetConstraintEase(AnimTransform):
+    def __init__(self, easeInStart, easeInStop, easeOutStart,
+            easeOutStop):
+        self.easeInStart = easeInStart
+        self.easeInStop = easeInStop
+        self.easeOutStart = easeOutStart
+        self.easeOutStop = easeOutStop
+
+    def __call__(self, anim):
+        constraint = anim.constraints[-1]
+        constraint.easeInStart = self.easeInStart
+        constraint.easeInStop = self.easeInStop
+        constraint.easeOutStart = self.easeOutStart
+        constraint.easeOutStop = self.easeOutStop
+
+class SetConstraintSourceOffset(AnimTransform):
+    def __init__(self, x, y, z):
+        self.offset = (x, y, z)
+
+    def __call__(self, anim):
+        constraint = anim.constraints[-1]
+        constraint.sourceOffset = self.offset
+
+class SetConstraintTargetOffset(AnimTransform):
+    def __init__(self, x, y, z):
+        self.offset = (x, y, z)
+
+    def __call__(self, anim):
+        constraint = anim.constraints[-1]
+        constraint.targetOffset = self.offset
+
+class SetConstraintTargetDir(AnimTransform):
+    def __init__(self, x, y, z):
+        self.offset = (x, y, z)
+
+    def __call__(self, anim):
+        constraint = anim.constraints[-1]
+        constraint.targetDir = self.offset
 
 
 
@@ -309,6 +349,16 @@ if __name__ == '__main__':
             dest='actions', func=AddConstraint, nargs=3)
     parser.add_argument('--drop-constraints', action=AppendObjectAction,
             dest='actions', func=DropConstraints)
+    parser.add_argument('--c-plane', action=AppendObjectAction,
+            dest='actions', func=SetConstraintType, constraintType=1)
+    parser.add_argument('--c-ease', action=AppendObjectAction,
+            dest='actions', func=SetConstraintEase, nargs=4, type=float)
+    parser.add_argument('--c-source-offset', action=AppendObjectAction,
+            dest='actions', func=SetConstraintSourceOffset, nargs=3, type=float)
+    parser.add_argument('--c-target-offset', action=AppendObjectAction,
+            dest='actions', func=SetConstraintTargetOffset, nargs=3, type=float)
+    parser.add_argument('--c-target-dir', action=AppendObjectAction,
+            dest='actions', func=SetConstraintTargetDir, nargs=3, type=float)
 
     args = parser.parse_args()
     _ensure_value(args, 'actions', [])
@@ -335,10 +385,10 @@ if __name__ == '__main__':
             anim.deserialize(inputFile)
             for action in args.actions:
                 action(anim)
-            anim.serialize(outputFile)
             anim.summarize(outputFile.name)
             if (args.verbose > 0):
                 anim.dump()
+            anim.serialize(outputFile)
 
 
 
