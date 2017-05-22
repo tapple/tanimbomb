@@ -176,10 +176,10 @@ class TransformJointsMatching(AnimTransform):
                 self.jointTransform(anim, joint)
 
 def dropLocationKeyframes(anim, joint):
-    joint.locKeys = ""
+    joint.locKeys = b""
 
 def dropRotationKeyframes(anim, joint):
-    joint.rotKeys = ""
+    joint.rotKeys = b""
 
 def dropPriority(anim, joint):
     joint.priority = anim.priority
