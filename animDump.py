@@ -313,10 +313,11 @@ class AppendObjectAction(argparse.Action):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-            description='Manipulate Secondlife .anim files')
+            description='Manipulate Secondlife .anim files',
+            fromfile_prefix_chars='@')
     parser.add_argument('files', type=argparse.FileType('rb'), nargs='+',
                         help='anim files to dump or process')
-    parser.add_argument('--verbose', '-v', action='count')
+    parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--outputfiles', '-o', type=argparse.FileType('wb'),
             nargs='*')
 
