@@ -145,6 +145,16 @@ class SetAnimProperty(AnimTransform):
         setattr(anim, self.key, self.value)
 
 
+class SpeedAnimation(AnimTransform):
+    def __init__(self, factor):
+        self.factor = factor
+
+    def __call__(self, anim):
+        anim.duration *= self.factor
+        anim.loopIn *= self.factor
+        anim.loopOut *= self.factor
+
+
 class TransformJointsMatching(AnimTransform):
     def __init__(self, *globs, jointTransform):
         self.dropGlobs = list()
@@ -320,6 +330,9 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--outputfiles', '-o', type=argparse.FileType('wb'),
             nargs='*')
+
+    parser.add_argument('--scale', '--speed', '-s', action=AppendObjectAction,
+            dest='actions', func=SpeedAnimation, nargs=1, type=float)
 
     parser.add_argument('--pri', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
