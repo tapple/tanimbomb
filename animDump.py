@@ -343,6 +343,15 @@ if __name__ == '__main__':
     parser.add_argument('--ease-out', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
             key='easeOut', type=float)
+    parser.add_argument('--loop', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='loop', type=int)
+    parser.add_argument('--loop-start', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='loopIn', type=float)
+    parser.add_argument('--loop-end', action=AppendObjectAction,
+            dest='actions', func=SetAnimProperty, nargs=1,
+            key='loopOut', type=float)
 
     parser.add_argument('--drop-loc', action=AppendObjectAction,
             dest='actions', func=TransformJointsMatching, nargs='*',
