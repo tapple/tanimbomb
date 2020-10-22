@@ -43,11 +43,76 @@ class JointMotion(object):
 
     @property
     def rotKeyCount(self):
-        return len(self.rotKeys) // JointMotion.KEY_SIZE
+        return len(self.rotKeys)
 
     @property
     def locKeyCount(self):
-        return len(self.locKeys) // JointMotion.KEY_SIZE
+        return len(self.locKeys)
+
+    @property
+    def rotKeysF(self):
+        return self.keys_int_to_float(self.rotKeys, 1.0)
+
+    @rotKeysF.setter
+    def rotKeysF(self, value):
+        self.rotKeys = self.keys_float_to_int(value, 1.0)
+
+    @property
+    def locKeysF(self):
+        return self.keys_int_to_float(self.locKeys, 5.0)
+
+    @locKeysF.setter
+    def locKeysF(self, value):
+        self.locKeys = self.keys_float_to_int(value, 5.0)
+
+    @staticmethod
+    def keys_int_to_float(keys, scale=1.0):
+        return [[
+            key[0]/65535, 
+            key[1]*scale/32767, 
+            key[2]*scale/32767, 
+            key[3]*scale/32767, 
+        ] for key in keys]
+
+    @staticmethod
+    def keys_float_to_int(keys, scale=1.0):
+        return [[
+            int(key[0]*65535),
+            int(key[1]/scale*32767),
+            int(key[2]/scale*32767),
+            int(key[3]/scale*32767),
+        ] for key in keys]
+
+    @staticmethod
+    def deserialize_keys(stream, keyCount):
+        keys = []
+        for keyNum in range(keyCount):
+            key = list(stream.unpack('HHHH'))
+            key[1] -= 32767
+            key[2] -= 32767
+            key[3] -= 32767
+            keys.append(key)
+        return keys
+
+    @staticmethod
+    def serialize_keys(stream, keys):
+        for key in keys:
+            stream.pack('HHHH', key[0], key[1]+32767, key[2]+32767, key[3]+32767)
+
+    def deserialize(self, stream):
+        self.name = stream.readCString().decode('ascii')
+        (self.priority, rotKeyCount) = stream.unpack("ii")
+        self.rotKeys = self.deserialize_keys(stream, rotKeyCount)
+        (locKeyCount,) = stream.unpack("i")
+        self.locKeys = self.deserialize_keys(stream, locKeyCount)
+
+    def serialize(self, stream):
+        stream.writeCString(self.name.encode('ascii'))
+        stream.pack("ii", self.priority, self.rotKeyCount)
+        self.serialize_keys(stream, self.rotKeys)
+        stream.pack("i", self.locKeyCount)
+        self.serialize_keys(stream, self.locKeys)
+
 
 
 class JointConstraintSharedData(object):
@@ -63,11 +128,7 @@ class KeyframeMotion(object):
         for jointNum in range(jointCount):
             joint = JointMotion()
             self.joints.append(joint)
-            joint.name = stream.readCString().decode('ascii')
-            (joint.priority, rotKeyCount) = stream.unpack("ii")
-            joint.rotKeys = stream.readBytes(rotKeyCount * JointMotion.KEY_SIZE)
-            (locKeyCount,) = stream.unpack("i")
-            joint.locKeys = stream.readBytes(locKeyCount * JointMotion.KEY_SIZE)
+            joint.deserialize(stream)
         (constraintCount,) = stream.unpack("i")
         self.constraints = list()
         for constraintNum in range(constraintCount):
@@ -87,11 +148,7 @@ class KeyframeMotion(object):
         stream.writeCString(self.emote.encode('ascii'))
         stream.pack("ffiffii", self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, len(self.joints))
         for joint in self.joints:
-            stream.writeCString(joint.name.encode('ascii'))
-            stream.pack("ii", joint.priority, joint.rotKeyCount)
-            stream.writeBytes(joint.rotKeys)
-            stream.pack("i", joint.locKeyCount)
-            stream.writeBytes(joint.locKeys)
+            joint.serialize(stream)
         stream.pack("i", len(self.constraints))
         for constraint in self.constraints:
             stream.pack("BB", constraint.chainLength, constraint.type)
@@ -111,6 +168,7 @@ class KeyframeMotion(object):
         print('joints: %d' % (len(self.joints),))
         for joint in self.joints:
             print('\tP%d %dR %dL: %s' % (joint.priority, joint.rotKeyCount, joint.locKeyCount, joint.name))
+
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
             print("\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" %
