@@ -38,16 +38,15 @@ class BinaryStream:
         self.writeBytes(string)
         self.writeBytes(b"\0")
 
+
 class JointMotion(object):
     KEY_SIZE = 8
 
-    @property
-    def rotKeyCount(self):
-        return len(self.rotKeys)
-
-    @property
-    def locKeyCount(self):
-        return len(self.locKeys)
+    def __init__(self, name='', priority=0):
+        self.name = name
+        self.priority = priority
+        self.rotKeys = []
+        self.locKeys = []
 
     @property
     def rotKeysF(self):
@@ -105,12 +104,13 @@ class JointMotion(object):
         self.rotKeys = self.deserialize_keys(stream, rotKeyCount)
         (locKeyCount,) = stream.unpack("i")
         self.locKeys = self.deserialize_keys(stream, locKeyCount)
+        return self
 
     def serialize(self, stream):
         stream.writeCString(self.name.encode('ascii'))
-        stream.pack("ii", self.priority, self.rotKeyCount)
+        stream.pack("ii", self.priority, len(self.rotKeys))
         self.serialize_keys(stream, self.rotKeys)
-        stream.pack("i", self.locKeyCount)
+        stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
 
@@ -118,7 +118,35 @@ class JointMotion(object):
 class JointConstraintSharedData(object):
     pass
 
+
 class KeyframeMotion(object):
+    def __init__(
+            self,
+            *,
+            priority=3,
+            duration = 0.0,
+            emote = '',
+            loopIn = 0.0,
+            loopOut = None,
+            loop = 1,
+            easeIn = 0.8,
+            easeOut = 0.8,
+            handPosture = 1,
+            ):
+        self.version = 1
+        self.subVersion = 0
+        self.priority = priority
+        self.duration = duration
+        self.emote = emote
+        self.loopIn = loopIn
+        self.loopOut = duration if loopOut is None else loopOut
+        self.loop = loop
+        self.easeIn = easeIn
+        self.easeOut = easeOut
+        self.handPosture = handPosture
+        self.joints = list()
+        self.constraints = list()
+
     def deserialize(self, file):
         stream = BinaryStream(file)
         (self.version, self.subVersion, self.priority, self.duration) = stream.unpack("HHif")
@@ -141,6 +169,7 @@ class KeyframeMotion(object):
             constraint.targetOffset = stream.unpack("3f")
             constraint.targetDir   = stream.unpack("3f")
             (constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop) = stream.unpack("4f")
+        return self
 
     def serialize(self, file):
         stream = BinaryStream(file)
@@ -167,7 +196,7 @@ class KeyframeMotion(object):
         print('ease: %f - %f' % (self.easeIn, self.easeOut))
         print('joints: %d' % (len(self.joints),))
         for joint in self.joints:
-            print('\tP%d %dR %dL: %s' % (joint.priority, joint.rotKeyCount, joint.locKeyCount, joint.name))
+            print('\tP%d %dR %dL: %s' % (joint.priority, len(joint.rotKeys), len(joint.locKeys), joint.name))
 
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
@@ -182,10 +211,16 @@ class KeyframeMotion(object):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
-            if (joint.rotKeyCount > 0): rotJointCount += 1
-            if (joint.locKeyCount > 0): locJointCount += 1
+            if (joint.rotKeys): rotJointCount += 1
+            if (joint.locKeys): locJointCount += 1
         print('%s: P%d %dR %dL %dC' % (name, self.priority,
                 rotJointCount, locJointCount, len(self.constraints)))
+
+    def new_joint(self, name, priority=None):
+        joint = JointMotion(name, self.priority if priority is None else priority)
+        self.joints.append(joint)
+        return joint
+
 
 class AnimTransform(object):
     def __init__(self):
@@ -193,6 +228,7 @@ class AnimTransform(object):
 
     def __call__(self, anim):
         pass
+
 
 class SetAnimProperty(AnimTransform):
     def __init__(self, value, key):
@@ -258,7 +294,7 @@ def dropJoint(anim, joint):
 class DropEmptyJoints(AnimTransform):
     def __call__(self, anim):
         anim.joints = [joint for joint in anim.joints if
-                (joint.rotKeyCount > 0 or joint.locKeyCount > 0)]
+                (joint.rotKeys or joint.locKeys)]
 
 
 
