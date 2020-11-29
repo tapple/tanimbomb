@@ -195,7 +195,7 @@ class KeyframeMotion(object):
     def deserialize_filename(self, filename):
         print("reading " + filename)
         with open(filename, 'rb') as f:
-            self.deserialize(f)
+            return self.deserialize(f)
 
     def serialize_filename(self, filename):
         print("writing " + filename)
