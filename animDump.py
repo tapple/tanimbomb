@@ -42,11 +42,16 @@ class BinaryStream:
 class JointMotion(object):
     KEY_SIZE = 8
 
-    def __init__(self, name='', priority=0):
+    def __init__(self, name='', priority=0, *,
+            rotKeys=None, locKeys=None, rotKeysF=None, locKeysF=None):
         self.name = name
         self.priority = priority
-        self.rotKeys = []
-        self.locKeys = []
+        self.rotKeys = rotKeys or []
+        self.locKeys = locKeys or []
+        if rotKeysF:
+            self.rotKeysF = rotKeysF
+        if locKeysF:
+            self.locKeysF = locKeysF
 
     @property
     def rotKeysF(self):
@@ -207,17 +212,22 @@ class KeyframeMotion(object):
                 constraint.targetDir,
                 constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop))
 
-    def summarize(self, name):
+    def summary(self, filename=None):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
             if (joint.rotKeys): rotJointCount += 1
             if (joint.locKeys): locJointCount += 1
-        print('%s: P%d %dR %dL %dC' % (name, self.priority,
-                rotJointCount, locJointCount, len(self.constraints)))
+        summary = 'P%d %dR %dL %dC' % (self.priority, rotJointCount, locJointCount, len(self.constraints))
+        if filename:
+            summary = '%s: %s' % (filename, summary)
+        return summary
 
-    def new_joint(self, name, priority=None):
-        joint = JointMotion(name, self.priority if priority is None else priority)
+    def summarize(self, filename=None):
+        print(self.summary(filename))
+
+    def new_joint(self, name, priority=None, **kwargs):
+        joint = JointMotion(name, self.priority if priority is None else priority, **kwargs)
         self.joints.append(joint)
         return joint
 
