@@ -192,6 +192,16 @@ class KeyframeMotion(object):
                 *constraint.targetDir,
                 constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop)
 
+    def deserialize_filename(self, filename):
+        print("reading " + filename)
+        with open(filename, 'rb') as f:
+            self.deserialize(f)
+
+    def serialize_filename(self, filename):
+        print("writing " + filename)
+        with open(filename, 'wb') as f:
+            self.serialize(f)
+
     def dump(self):
         print("version: %d.%d" % (self.version, self.subVersion))
         print("priority: %d" % (self.priority,))
