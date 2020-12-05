@@ -296,6 +296,32 @@ class SpeedAnimation(AnimTransform):
         anim.loopOut *= self.factor
 
 
+class OffsetJoint(AnimTransform):
+    def __init__(self, *args):
+        self.joint = 'mPelvis'
+        offset = np.zeros(JointMotion.KEY_SIZE)
+        if len(args) == 1:
+            offset[3] = args[0]
+        elif len(args) == 2:
+            self.joint = args[0]
+            offset[3] = args[1]
+        elif len(args) == 3:
+            offset[1:4] = args
+        elif len(args) == 4:
+            self.joint = args[0]
+            offset[1:4] = args[1:4]
+        else:
+            raise ValueError("1-4 arguments required")
+        self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
+
+    def __call__(self, anim):
+        try:
+            joint = anim[self.joint]
+        except KeyError:
+            joint = anim.new_joint(self.joint, locKeys=np.zeros[JointMotion.KEY_SIZE])
+        joint._locKeys += self.offset
+
+
 class TransformJointsMatching(AnimTransform):
     def __init__(self, *globs, jointTransform):
         self.dropGlobs = list()
@@ -384,6 +410,7 @@ class SetConstraintType(AnimTransform):
         constraint = anim.constraints[-1]
         constraint.type = self.constraintType
 
+
 class SetConstraintEase(AnimTransform):
     def __init__(self, easeInStart, easeInStop, easeOutStart,
             easeOutStop):
@@ -399,6 +426,7 @@ class SetConstraintEase(AnimTransform):
         constraint.easeOutStart = self.easeOutStart
         constraint.easeOutStop = self.easeOutStop
 
+
 class SetConstraintSourceOffset(AnimTransform):
     def __init__(self, x, y, z):
         self.offset = (x, y, z)
@@ -407,6 +435,7 @@ class SetConstraintSourceOffset(AnimTransform):
         constraint = anim.constraints[-1]
         constraint.sourceOffset = self.offset
 
+
 class SetConstraintTargetOffset(AnimTransform):
     def __init__(self, x, y, z):
         self.offset = (x, y, z)
@@ -414,6 +443,7 @@ class SetConstraintTargetOffset(AnimTransform):
     def __call__(self, anim):
         constraint = anim.constraints[-1]
         constraint.targetOffset = self.offset
+
 
 class SetConstraintTargetDir(AnimTransform):
     def __init__(self, x, y, z):
@@ -424,12 +454,11 @@ class SetConstraintTargetDir(AnimTransform):
         constraint.targetDir = self.offset
 
 
-
-
 def _ensure_value(namespace, name, value):
     if getattr(namespace, name, None) is None:
         setattr(namespace, name, value)
     return getattr(namespace, name)
+
 
 class AppendObjectAction(argparse.Action):
     def __init__(self,
@@ -480,6 +509,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--scale', '--speed', '-s', action=AppendObjectAction,
             dest='actions', func=SpeedAnimation, nargs=1, type=float)
+    parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
+                        dest='actions', func=OffsetJoint, nargs='+',
+                        help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
 
     parser.add_argument('--pri', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
