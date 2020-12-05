@@ -5,6 +5,13 @@ import fnmatch
 import struct
 import copy
 import sys
+import numpy as np
+
+
+def array(*args, **kwargs):
+    kwargs.setdefault("dtype", np.float32)
+    return np.array(*args, **kwargs)
+
 
 # http://stackoverflow.com/questions/442188/readint-readbyte-readstring-etc-in-python
 #
@@ -40,7 +47,10 @@ class BinaryStream:
 
 
 class JointMotion(object):
-    KEY_SIZE = 8
+    U16 = np.dtype('<H')
+    U16MAX = 65535
+    KEY_SIZE = 4
+    LOC_MAX = 5
 
     def __init__(self, name='', priority=0, *,
             rotKeys=None, locKeys=None, rotKeysF=None, locKeysF=None):
@@ -54,61 +64,66 @@ class JointMotion(object):
             self.locKeysF = locKeysF
 
     @property
+    def rotKeys(self):
+        return self._rotKeys
+
+    @rotKeys.setter
+    def rotKeys(self, value):
+        self._rotKeys = np.array(np.clip(value, 0, self.U16MAX),
+            self.U16).reshape((-1, self.KEY_SIZE))
+
+    @property
+    def locKeys(self):
+        return self._locKeys
+
+    @locKeys.setter
+    def locKeys(self, value):
+        self._locKeys = np.array(np.clip(value, 0, self.U16MAX),
+            self.U16).reshape((-1, self.KEY_SIZE))
+
+    @property
     def rotKeysF(self):
-        return self.keys_int_to_float(self.rotKeys, 1.0)
+        return self.keys_int_to_float(self.rotKeys)
 
     @rotKeysF.setter
     def rotKeysF(self, value):
-        self.rotKeys = self.keys_float_to_int(value, 1.0)
+        self.rotKeys = self.keys_float_to_int(value)
 
     @property
     def locKeysF(self):
-        return self.keys_int_to_float(self.locKeys, 5.0)
+        return self.keys_int_to_float(self.locKeys, self.LOC_MAX)
 
     @locKeysF.setter
     def locKeysF(self, value):
-        self.locKeys = self.keys_float_to_int(value, 5.0)
+        self.locKeys = self.keys_float_to_int(value, self.LOC_MAX)
 
-    @staticmethod
-    def keys_int_to_float(keys, scale=1.0):
-        return [[
-            key[0]/65535, 
-            key[1]*scale/32767, 
-            key[2]*scale/32767, 
-            key[3]*scale/32767, 
-        ] for key in keys]
+    @classmethod
+    def keys_int_to_float(cls, keys, scale=1.0, dur=1.0):
+        m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
+        b = array([0, -scale, -scale, -scale])
+        return keys * m + b
 
-    @staticmethod
-    def keys_float_to_int(keys, scale=1.0):
-        return [[
-            int(key[0]*65535),
-            int(key[1]/scale*32767),
-            int(key[2]/scale*32767),
-            int(key[3]/scale*32767),
-        ] for key in keys]
+    @classmethod
+    def keys_float_to_int(cls, keys, scale=1.0, dur=1.0):
+        m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
+        b = array([0, -scale, -scale, -scale])
+        return (keys - b) / m
 
-    @staticmethod
-    def deserialize_keys(stream, keyCount):
-        keys = []
-        for keyNum in range(keyCount):
-            key = list(stream.unpack('HHHH'))
-            key[1] -= 32767
-            key[2] -= 32767
-            key[3] -= 32767
-            keys.append(key)
-        return keys
+    @classmethod
+    def deserialize_keys(cls, stream, keyCount):
+        return np.fromfile(stream.base_stream, cls.U16, keyCount*cls.KEY_SIZE
+            ).reshape((keyCount, cls.KEY_SIZE))
 
-    @staticmethod
-    def serialize_keys(stream, keys):
-        for key in keys:
-            stream.pack('HHHH', key[0], key[1]+32767, key[2]+32767, key[3]+32767)
+    @classmethod
+    def serialize_keys(cls, stream, keys):
+        keys.tofile(stream.base_stream)
 
     def deserialize(self, stream):
         self.name = stream.readCString().decode('ascii')
         (self.priority, rotKeyCount) = stream.unpack("ii")
-        self.rotKeys = self.deserialize_keys(stream, rotKeyCount)
+        self._rotKeys = self.deserialize_keys(stream, rotKeyCount)
         (locKeyCount,) = stream.unpack("i")
-        self.locKeys = self.deserialize_keys(stream, locKeyCount)
+        self._locKeys = self.deserialize_keys(stream, locKeyCount)
         return self
 
     def serialize(self, stream):
@@ -118,6 +133,12 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
+    def __repr__(self):
+        return "<%s %s>" % (self.__class__.__name__, self)
+
+    def __str__(self):
+        return 'P%d %dR %dL: %s' % (
+            self.priority, len(self.rotKeys), len(self.locKeys), self.name)
 
 
 class JointConstraintSharedData(object):
@@ -211,7 +232,7 @@ class KeyframeMotion(object):
         print('ease: %f - %f' % (self.easeIn, self.easeOut))
         print('joints: %d' % (len(self.joints),))
         for joint in self.joints:
-            print('\tP%d %dR %dL: %s' % (joint.priority, len(joint.rotKeys), len(joint.locKeys), joint.name))
+            print('\t%s' % joint)
 
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
@@ -226,8 +247,8 @@ class KeyframeMotion(object):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
-            if (joint.rotKeys): rotJointCount += 1
-            if (joint.locKeys): locJointCount += 1
+            if (joint.rotKeys.size): rotJointCount += 1
+            if (joint.locKeys.size): locJointCount += 1
         summary = 'P%d %dR %dL %dC' % (self.priority, rotJointCount, locJointCount, len(self.constraints))
         if filename:
             summary = '%s: %s' % (filename, summary)
@@ -240,6 +261,12 @@ class KeyframeMotion(object):
         joint = JointMotion(name, self.priority if priority is None else priority, **kwargs)
         self.joints.append(joint)
         return joint
+
+    def __getitem__(self, item):
+        for joint in self.joints:
+            if joint.name == item:
+                return joint
+        raise KeyError(item)
 
 
 class AnimTransform(object):
@@ -299,23 +326,27 @@ class TransformJointsMatching(AnimTransform):
             if self._shouldDropJointNamed(joint.name):
                 self.jointTransform(anim, joint)
 
+
 def dropLocationKeyframes(anim, joint):
-    joint.locKeys = b""
+    joint.locKeys = []
+
 
 def dropRotationKeyframes(anim, joint):
-    joint.rotKeys = b""
+    joint.rotKeys = []
+
 
 def dropPriority(anim, joint):
     joint.priority = anim.priority
 
+
 def dropJoint(anim, joint):
     anim.joints.remove(joint)
+
 
 class DropEmptyJoints(AnimTransform):
     def __call__(self, anim):
         anim.joints = [joint for joint in anim.joints if
-                (joint.rotKeys or joint.locKeys)]
-
+                (joint.rotKeys.size or joint.locKeys.size)]
 
 
 class AddConstraint(AnimTransform):
@@ -339,9 +370,11 @@ class AddConstraint(AnimTransform):
     def __call__(self, anim):
         anim.constraints.append(self.constraint)
 
+
 class DropConstraints(AnimTransform):
     def __call__(self, anim):
         anim.constraints = list()
+
 
 class SetConstraintType(AnimTransform):
     def __init__(self, constraintType):
@@ -526,11 +559,3 @@ if __name__ == '__main__':
             if (args.verbose > 0):
                 anim.dump()
             anim.serialize(outputFile)
-
-
-
-
-
-
-
-
