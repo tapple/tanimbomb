@@ -286,6 +286,17 @@ class SetAnimProperty(AnimTransform):
         setattr(anim, self.key, self.value)
 
 
+class SetAnimPriority(AnimTransform):
+    def __init__(self, priority):
+        self.priority = priority
+
+    def __call__(self, anim):
+        for joint in anim.joints:
+            if joint.priority == anim.priority:
+                joint.priority = self.priority
+        anim.priority = self.priority
+
+
 class SpeedAnimation(AnimTransform):
     def __init__(self, factor):
         self.factor = factor
@@ -514,8 +525,8 @@ if __name__ == '__main__':
                         help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
 
     parser.add_argument('--pri', action=AppendObjectAction,
-            dest='actions', func=SetAnimProperty, nargs=1,
-            key='priority', type=int)
+            dest='actions', func=SetAnimPriority, nargs=1,
+            type=int)
     parser.add_argument('--ease-in', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
             key='easeIn', type=float)
