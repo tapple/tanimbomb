@@ -142,7 +142,32 @@ class JointMotion(object):
 
 
 class JointConstraintSharedData(object):
-    pass
+    def deserialize(self, stream):
+        (self.chainLength, self.type) = stream.unpack("BB")
+        self.sourceVolume = stream.unpack("16s")[0].decode('ascii')
+        self.sourceOffset = stream.unpack("3f")
+        self.targetVolume = stream.unpack("16s")[0].decode('ascii')
+        self.targetOffset = stream.unpack("3f")
+        self.targetDir = stream.unpack("3f")
+        (self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop) = stream.unpack("4f")
+        return self
+
+    def serialize(self, stream):
+        stream.pack("BB", self.chainLength, self.type)
+        stream.pack("16s3f16s3f3f4f",
+            self.sourceVolume.encode('ascii'), *self.sourceOffset,
+            self.targetVolume.encode('ascii'), *self.targetOffset,
+            *self.targetDir,
+            self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop)
+
+    def dump(self):
+        return "\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" % (
+            self.chainLength, self.type,
+            self.sourceVolume, self.sourceOffset,
+            self.targetVolume, self.targetOffset,
+            self.targetDir,
+            self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop,
+        )
 
 
 class KeyframeMotion(object):
@@ -150,14 +175,14 @@ class KeyframeMotion(object):
             self,
             *,
             priority=3,
-            duration = 0.0,
-            emote = '',
-            loopIn = 0.0,
-            loopOut = None,
-            loop = 1,
-            easeIn = 0.8,
-            easeOut = 0.8,
-            handPosture = 1,
+            duration=0.0,
+            emote='',
+            loopIn=0.0,
+            loopOut=None,
+            loop=1,
+            easeIn=0.8,
+            easeOut=0.8,
+            handPosture=1,
             ):
         self.version = 1
         self.subVersion = 0
@@ -188,13 +213,7 @@ class KeyframeMotion(object):
         for constraintNum in range(constraintCount):
             constraint = JointConstraintSharedData()
             self.constraints.append(constraint)
-            (constraint.chainLength, constraint.type) = stream.unpack("BB")
-            constraint.sourceVolume = stream.unpack("16s")[0].decode('ascii')
-            constraint.sourceOffset = stream.unpack("3f")
-            constraint.targetVolume = stream.unpack("16s")[0].decode('ascii')
-            constraint.targetOffset = stream.unpack("3f")
-            constraint.targetDir   = stream.unpack("3f")
-            (constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop) = stream.unpack("4f")
+            constraint.deserialize(stream)
         return self
 
     def serialize(self, file):
@@ -206,12 +225,7 @@ class KeyframeMotion(object):
             joint.serialize(stream)
         stream.pack("i", len(self.constraints))
         for constraint in self.constraints:
-            stream.pack("BB", constraint.chainLength, constraint.type)
-            stream.pack("16s3f16s3f3f4f",
-                constraint.sourceVolume.encode('ascii'), *constraint.sourceOffset,
-                constraint.targetVolume.encode('ascii'), *constraint.targetOffset,
-                *constraint.targetDir,
-                constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop)
+            constraint.serialize(stream)
 
     def deserialize_filename(self, filename):
         print("reading " + filename)
@@ -236,12 +250,7 @@ class KeyframeMotion(object):
 
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
-            print("\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" %
-                (constraint.chainLength, constraint.type,
-                constraint.sourceVolume, constraint.sourceOffset,
-                constraint.targetVolume, constraint.targetOffset,
-                constraint.targetDir,
-                constraint.easeInStart, constraint.easeInStop, constraint.easeOutStart, constraint.easeOutStop))
+            print(constraint.dump())
 
     def summary(self, filename=None):
         rotJointCount = 0
