@@ -363,19 +363,27 @@ class MirrorJoints(AnimTransform):
     def __init__(self, *args):
         pass
 
-    def __call__(self, anim):
-        pass
+    def __call__(self, anim: KeyframeMotion):
+        loc_scale  = np.array([1, 1, -1, 1], JointMotion.U16)
+        loc_offset = np.array([0, 0, -1, 0], JointMotion.U16)
+        rot_scale  = np.array([1, 1, 1, -1], JointMotion.U16)
+        rot_offset = np.array([0, 0, 0, -1], JointMotion.U16)
+        for joint in anim.joints:
+            assert joint.name not in self.ROTATED_JOINTS
+            joint.name = self.mirror_joint_name(joint.name)
+            joint.locKeys = joint.locKeys * loc_scale + loc_offset
+            joint.rotKeys = joint.rotKeys * rot_scale + rot_offset
 
     @staticmethod
     def mirror_joint_name(name: str):
         if "Left" in name:
-            return name.replace("Left", "Right")
+            return name.replace("Left", "Right", 1)
         elif "Right" in name:
-            return name.replace("Right", "Left")
+            return name.replace("Right", "Left", 1)
         elif "LEFT" in name:
-            return name.replace("LEFT", "RIGHT")
+            return name.replace("LEFT", "RIGHT", 1)
         elif "RIGHT" in name:
-            return name.replace("RIGHT", "LEFT")
+            return name.replace("RIGHT", "LEFT", 1)
         elif name.startswith("L_"):
             return name.replace("L_", "R_", 1)
         elif name.startswith("R_"):
@@ -578,6 +586,8 @@ if __name__ == '__main__':
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
                         dest='actions', func=OffsetJoint, nargs='+',
                         help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
+    parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
+                        dest='actions', func=MirrorJoints, nargs=0)
 
     parser.add_argument('--pri', action=AppendObjectAction,
             dest='actions', func=SetAnimPriority, nargs=1,
