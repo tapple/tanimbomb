@@ -342,6 +342,52 @@ class OffsetJoint(AnimTransform):
         joint._locKeys += self.offset
 
 
+class MirrorJoints(AnimTransform):
+    ROTATED_JOINTS = {
+        "CHEST": [0, -10, 0],
+        "LEFT_PEC": [0, 4.29, 0],
+        "RIGHT_PEC": [0, 4.29, 0],
+        "L_UPPER_ARM": [-5, 0, 0],
+        "R_UPPER_ARM": [5, 0, 0],
+        "L_LOWER_ARM": [-3, 0, 0],
+        "R_LOWER_ARM": [3, 0, 0],
+        "L_HAND": [-3, 0, -10],
+        "R_HAND": [3, 0, 10],
+        "L_FOOT": [0, 10, 0],
+        "R_FOOT": [0, 10, 0],
+        "Chest": [0, 90, 90],
+        "Spine": [0, -90, 90],
+        "Skull": [0, 0, 90],
+    }
+
+    def __init__(self, *args):
+        pass
+
+    def __call__(self, anim):
+        pass
+
+    @staticmethod
+    def mirror_joint_name(name: str):
+        if "Left" in name:
+            return name.replace("Left", "Right")
+        elif "Right" in name:
+            return name.replace("Right", "Left")
+        elif "LEFT" in name:
+            return name.replace("LEFT", "RIGHT")
+        elif "RIGHT" in name:
+            return name.replace("RIGHT", "LEFT")
+        elif name.startswith("L_"):
+            return name.replace("L_", "R_", 1)
+        elif name.startswith("R_"):
+            return name.replace("R_", "L_", 1)
+        elif name.startswith("L "):
+            return name.replace("L ", "R ", 1)
+        elif name.startswith("R "):
+            return name.replace("R ", "L ", 1)
+        else:
+            return name
+
+
 class TransformJointsMatching(AnimTransform):
     def __init__(self, *globs, jointTransform):
         self.dropGlobs = list()
