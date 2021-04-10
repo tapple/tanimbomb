@@ -94,6 +94,9 @@ class JointMotion(object):
     def locKeysF(self, value):
         self.locKeys = self.keys_float_to_int(value, self.LOC_MAX)
 
+    def get_locKeysF(self, dur=1.0):
+        return self.keys_int_to_float(self.locKeys, self.LOC_MAX, dur=dur)
+
     @classmethod
     def keys_int_to_float(cls, keys, scale=1.0, dur=1.0):
         m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
@@ -130,6 +133,20 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
+    def create_fcurves(self, action, dur):
+        if self.locKeys:
+            data_path = 'pose.bones["%s"].location' % self.name
+            fx = action.fcurves.new(data_path=data_path, index=0)
+            fy = action.fcurves.new(data_path=data_path, index=1)
+            fz = action.fcurves.new(data_path=data_path, index=2)
+            fx.keyframe_points.add(len(self.locKeys))
+            fy.keyframe_points.add(len(self.locKeys))
+            fz.keyframe_points.add(len(self.locKeys))
+            for i, (t, x, y, z) in enumerate(self.get_locKeysF(dur)):
+                fx.keyframe_points[i].co = (t, x)
+                fy.keyframe_points[i].co = (t, y)
+                fz.keyframe_points[i].co = (t, z)
+                
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self)
 
@@ -165,6 +182,7 @@ class JointConstraintSharedData(object):
             self.targetDir,
             self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop,
         )
+    
 
 
 class KeyframeMotion(object):
@@ -251,7 +269,10 @@ class KeyframeMotion(object):
             print(constraint.dump())
     
     def create_action(self, name):
+        dur = self.duration * self.framerate
         action = bpy.data.actions.new(name=name)
+        for joint in self.joints:
+            joint.create_fcurves(action, dur)
 
     def summary(self, filename=None):
         rotJointCount = 0
