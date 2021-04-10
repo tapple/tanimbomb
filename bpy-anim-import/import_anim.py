@@ -138,22 +138,17 @@ class JointMotion(object):
         self.serialize_keys(stream, self.locKeys)
 
     def create_fcurves(self, action, dur):
-        group = action.groups.new(self.name)
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
             print(data_path)
-            fw = action.fcurves.new(data_path=data_path, index=0)
-            fx = action.fcurves.new(data_path=data_path, index=1)
-            fy = action.fcurves.new(data_path=data_path, index=2)
-            fz = action.fcurves.new(data_path=data_path, index=3)
+            fw = action.fcurves.new(data_path, 0, self.name)
+            fx = action.fcurves.new(data_path, 1, self.name)
+            fy = action.fcurves.new(data_path, 2, self.name)
+            fz = action.fcurves.new(data_path, 3, self.name)
             fw.keyframe_points.add(len(self.rotKeys))
             fx.keyframe_points.add(len(self.rotKeys))
             fy.keyframe_points.add(len(self.rotKeys))
             fz.keyframe_points.add(len(self.rotKeys))
-            fw.group = group
-            fx.group = group
-            fy.group = group
-            fz.group = group
             for i, (t, x, y, z) in enumerate(self.get_rotKeysF(dur)):
                 fw.keyframe_points[i].co = (t, math.sqrt(1 - x*x - y*y - z*z))
                 fx.keyframe_points[i].co = (t, y)
@@ -162,19 +157,20 @@ class JointMotion(object):
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
             print(data_path)
-            fx = action.fcurves.new(data_path=data_path, index=0)
-            fy = action.fcurves.new(data_path=data_path, index=1)
-            fz = action.fcurves.new(data_path=data_path, index=2)
+            fx = action.fcurves.new(data_path, 0, self.name)
+            fy = action.fcurves.new(data_path, 1, self.name)
+            fz = action.fcurves.new(data_path, 2, self.name)
             fx.keyframe_points.add(len(self.locKeys))
             fy.keyframe_points.add(len(self.locKeys))
             fz.keyframe_points.add(len(self.locKeys))
-            fx.group = group
-            fy.group = group
-            fz.group = group
             for i, (t, x, y, z) in enumerate(self.get_locKeysF(dur)):
                 fx.keyframe_points[i].co = (t, y)
                 fy.keyframe_points[i].co = (t, x)
                 fz.keyframe_points[i].co = (t, -z)
+        data_path = 'pose.bones["%s"]["priority"]' % self.name
+        print(data_path)
+        f = action.fcurves.new(data_path, 0, self.name)
+        f.keyframe_points.insert(0, self.priority)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self)
