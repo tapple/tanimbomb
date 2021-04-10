@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import struct
+import math
 import numpy as np
 import bpy
 
@@ -86,6 +87,9 @@ class JointMotion(object):
     def rotKeysF(self, value):
         self.rotKeys = self.keys_float_to_int(value)
 
+    def get_rotKeysF(self, dur=1.0):
+        return self.keys_int_to_float(self.rotKeys, dur=dur)
+
     @property
     def locKeysF(self):
         return self.keys_int_to_float(self.locKeys, self.LOC_MAX)
@@ -135,6 +139,26 @@ class JointMotion(object):
 
     def create_fcurves(self, action, dur):
         group = action.groups.new(self.name)
+        if self.rotKeys.size:
+            data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
+            print(data_path)
+            fw = action.fcurves.new(data_path=data_path, index=0)
+            fx = action.fcurves.new(data_path=data_path, index=1)
+            fy = action.fcurves.new(data_path=data_path, index=2)
+            fz = action.fcurves.new(data_path=data_path, index=3)
+            fw.keyframe_points.add(len(self.rotKeys))
+            fx.keyframe_points.add(len(self.rotKeys))
+            fy.keyframe_points.add(len(self.rotKeys))
+            fz.keyframe_points.add(len(self.rotKeys))
+            fw.group = group
+            fx.group = group
+            fy.group = group
+            fz.group = group
+            for i, (t, x, y, z) in enumerate(self.get_rotKeysF(dur)):
+                fw.keyframe_points[i].co = (t, math.sqrt(x*x + y*y + z*z))
+                fx.keyframe_points[i].co = (t, x)
+                fy.keyframe_points[i].co = (t, y)
+                fz.keyframe_points[i].co = (t, z)
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
             print(data_path)
@@ -151,7 +175,7 @@ class JointMotion(object):
                 fx.keyframe_points[i].co = (t, x)
                 fy.keyframe_points[i].co = (t, y)
                 fz.keyframe_points[i].co = (t, z)
-                
+
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self)
 
