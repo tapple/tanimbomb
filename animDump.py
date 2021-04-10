@@ -173,7 +173,7 @@ class JointConstraintSharedData(object):
 class KeyframeMotion(object):
     def __init__(
             self,
-            *,
+            # *, # Python 3.5
             priority=3,
             duration=0.0,
             emote='',
