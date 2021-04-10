@@ -571,11 +571,9 @@ class AppendObjectAction(argparse.Action):
 
 
 if __name__ == '__main__':
-    # summarize all files
-    file = 
-    for file in args.files:
+    filename = 'Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim'
+    with open(filename, 'rb') as file:
         anim = KeyframeMotion()
         anim.deserialize(file)
         anim.summarize(file.name)
-        if (args.verbose > 0):
-            anim.dump()
+        anim.dump()
