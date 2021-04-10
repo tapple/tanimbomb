@@ -2,6 +2,7 @@
 
 import struct
 import numpy as np
+import bpy
 
 
 def array(*args, **kwargs):
@@ -193,6 +194,7 @@ class KeyframeMotion(object):
         self.handPosture = handPosture
         self.joints = list()
         self.constraints = list()
+        self.frameRate = 30
 
     def deserialize(self, file):
         stream = BinaryStream(file)
@@ -247,6 +249,9 @@ class KeyframeMotion(object):
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
             print(constraint.dump())
+    
+    def create_action(self, name):
+        action = bpy.data.actions.new(name=name)
 
     def summary(self, filename=None):
         rotJointCount = 0
@@ -276,8 +281,11 @@ class KeyframeMotion(object):
 
 if __name__ == '__main__':
     filename = 'Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim'
+    from pathlib import Path
+    filepath = Path(filename)
     with open(filename, 'rb') as file:
         anim = KeyframeMotion()
         anim.deserialize(file)
         anim.summarize(file.name)
         anim.dump()
+        anim.create_action(filepath.stem)
