@@ -134,14 +134,19 @@ class JointMotion(object):
         self.serialize_keys(stream, self.locKeys)
 
     def create_fcurves(self, action, dur):
-        if self.locKeys:
+        group = action.groups.new(self.name)
+        if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
+            print(data_path)
             fx = action.fcurves.new(data_path=data_path, index=0)
             fy = action.fcurves.new(data_path=data_path, index=1)
             fz = action.fcurves.new(data_path=data_path, index=2)
             fx.keyframe_points.add(len(self.locKeys))
             fy.keyframe_points.add(len(self.locKeys))
             fz.keyframe_points.add(len(self.locKeys))
+            fx.group = group
+            fy.group = group
+            fz.group = group
             for i, (t, x, y, z) in enumerate(self.get_locKeysF(dur)):
                 fx.keyframe_points[i].co = (t, x)
                 fy.keyframe_points[i].co = (t, y)
@@ -269,10 +274,14 @@ class KeyframeMotion(object):
             print(constraint.dump())
     
     def create_action(self, name):
-        dur = self.duration * self.framerate
+        dur = self.duration * self.frameRate
         action = bpy.data.actions.new(name=name)
         for joint in self.joints:
             joint.create_fcurves(action, dur)
+        for cu in action.fcurves:
+            for bez in cu.keyframe_points:
+                bez.interpolation = 'LINEAR'
+        return action
 
     def summary(self, filename=None):
         rotJointCount = 0
@@ -309,4 +318,4 @@ if __name__ == '__main__':
         anim.deserialize(file)
         anim.summarize(file.name)
         anim.dump()
-        anim.create_action(filepath.stem)
+        print(anim.create_action(filepath.stem))
