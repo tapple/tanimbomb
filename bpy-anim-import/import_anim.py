@@ -155,10 +155,10 @@ class JointMotion(object):
             fy.group = group
             fz.group = group
             for i, (t, x, y, z) in enumerate(self.get_rotKeysF(dur)):
-                fw.keyframe_points[i].co = (t, math.sqrt(x*x + y*y + z*z))
-                fx.keyframe_points[i].co = (t, x)
-                fy.keyframe_points[i].co = (t, y)
-                fz.keyframe_points[i].co = (t, z)
+                fw.keyframe_points[i].co = (t, math.sqrt(1 - x*x - y*y - z*z))
+                fx.keyframe_points[i].co = (t, y)
+                fy.keyframe_points[i].co = (t, x)
+                fz.keyframe_points[i].co = (t, -z)
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
             print(data_path)
@@ -172,9 +172,9 @@ class JointMotion(object):
             fy.group = group
             fz.group = group
             for i, (t, x, y, z) in enumerate(self.get_locKeysF(dur)):
-                fx.keyframe_points[i].co = (t, x)
-                fy.keyframe_points[i].co = (t, y)
-                fz.keyframe_points[i].co = (t, z)
+                fx.keyframe_points[i].co = (t, y)
+                fy.keyframe_points[i].co = (t, x)
+                fz.keyframe_points[i].co = (t, -z)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self)
