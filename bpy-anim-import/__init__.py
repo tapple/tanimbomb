@@ -33,19 +33,11 @@ bl_info = {
 
 import bpy
 from bpy.props import StringProperty
-from bpy_extras.io_utils import (
-        ImportHelper,
-        ExportHelper,
-        orientation_helper_factory,
-        axis_conversion,
-        )
-
-
-ImportBVHOrientationHelper = orientation_helper_factory("ImportBVHOrientationHelper", axis_forward='-Z', axis_up='Y')
+from bpy_extras.io_utils import ImportHelper
 
 
 class ImportANIM(bpy.types.Operator, ImportHelper):
-    """Load a BVH motion capture file"""
+    """Load a SecondLife Animation file"""
     bl_idname = "import_anim.anim"
     bl_label = "Import SecondLife Anim"
     bl_options = {'REGISTER', 'UNDO'}
@@ -55,24 +47,24 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         print(self.as_keywords())
-        # from . import import_anim
-        # return import_anim.load(context, report=self.report, **keywords)
+        from . import import_anim
+        import_anim.load(context)
+        return {'FINISHED'}
 
 
 def menu_func_import(self, context):
-    self.layout.operator(ImportANIM.bl_idname, text="SecondLife Animation (.anim)")
+    self.layout.operator(ImportANIM.bl_idname, text="SL Animation (.anim)")
 
 
 def register():
     bpy.utils.register_module(__name__)
-
     bpy.types.INFO_MT_file_import.append(menu_func_import)
 
 
 def unregister():
     bpy.utils.unregister_module(__name__)
-
     bpy.types.INFO_MT_file_import.remove(menu_func_import)
+
 
 if __name__ == "__main__":
     register()

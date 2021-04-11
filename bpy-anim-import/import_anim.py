@@ -2,6 +2,7 @@
 
 import struct
 import math
+from pathlib import Path
 import numpy as np
 import bpy
 
@@ -331,13 +332,15 @@ class KeyframeMotion(object):
         raise KeyError(item)
 
 
-if __name__ == '__main__':
-    filename = 'Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim'
-    from pathlib import Path
+def load(filename):
     filepath = Path(filename)
     with open(filename, 'rb') as file:
         anim = KeyframeMotion()
         anim.deserialize(file)
-        anim.summarize(file.name)
-        anim.dump()
+        # anim.summarize(file.name)
+        # anim.dump()
         print(anim.create_action(filepath.stem))
+
+
+if __name__ == '__main__':
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
