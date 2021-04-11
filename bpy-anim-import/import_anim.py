@@ -289,10 +289,10 @@ class KeyframeMotion(object):
 
         action.AnimProps.Priority = self.priority
         action.AnimProps.frame_start = 0
-        action.AnimProps.frame_end = dur
+        action.AnimProps.frame_end = dur + 0.5
         # action.AnimProps.??? = self.emote
-        action.AnimProps.Loop_In = self.loopIn * dur
-        action.AnimProps.Loop_Out = self.loopOut * dur
+        action.AnimProps.Loop_In = self.loopIn * dur + 0.5
+        action.AnimProps.Loop_Out = self.loopOut * dur + 0.5
         action.AnimProps.Loop = self.loop
         action.AnimProps.Ease_In = self.easeIn
         action.AnimProps.Ease_Out = self.easeOut
