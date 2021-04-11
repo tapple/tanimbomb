@@ -386,7 +386,7 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         print(self.as_keywords())
-        load(context)
+        load(self.filepath)
         return {'FINISHED'}
 
 
