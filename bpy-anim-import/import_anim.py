@@ -286,6 +286,18 @@ class KeyframeMotion(object):
     def create_action(self, name):
         dur = self.duration * self.frameRate
         action = bpy.data.actions.new(name=name)
+
+        action.AnimProps.Priority = self.priority
+        action.AnimProps.frame_start = 0
+        action.AnimProps.frame_end = dur
+        # action.AnimProps.??? = self.emote
+        action.AnimProps.Loop_In = self.loopIn * dur
+        action.AnimProps.Loop_Out = self.loopOut * dur
+        action.AnimProps.Loop = self.loop
+        action.AnimProps.Ease_In = self.easeIn
+        action.AnimProps.Ease_Out = self.easeOut
+        action.AnimProps.Hand_Posture = str(self.handPosture)
+        action.AnimProps.fps = self.frameRate
         for joint in self.joints:
             joint.create_fcurves(action, dur)
         for cu in action.fcurves:
