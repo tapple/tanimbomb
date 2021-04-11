@@ -404,5 +404,8 @@ def unregister():
 
 
 if __name__ == "__main__":
-    register()
+    # register()
     # load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
