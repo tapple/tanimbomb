@@ -58,9 +58,9 @@ class JointMotion(object):
         self.priority = priority
         self.rotKeys = rotKeys or []
         self.locKeys = locKeys or []
-        if rotKeysF:
+        if rotKeysF is not None:
             self.rotKeysF = rotKeysF
-        if locKeysF:
+        if locKeysF is not None:
             self.locKeysF = locKeysF
 
     @property
