@@ -179,7 +179,7 @@ class JointMotion(object):
         self.serialize_keys(stream, self.locKeys)
 
     def create_fcurves(self, action, dur, armature):
-        bone_rot = armature.data.bones[self.name].matrix.to_quaternion()
+        bone_rot = armature.data.bones[self.name].matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
