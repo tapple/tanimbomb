@@ -174,21 +174,27 @@ class JointMotion(object):
     def create_fcurves(self, action, dur):
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
+            print("data_path = %s" % data_path)
             fw = action.fcurves.new(data_path, 0, self.name)
             fx = action.fcurves.new(data_path, 1, self.name)
             fy = action.fcurves.new(data_path, 2, self.name)
             fz = action.fcurves.new(data_path, 3, self.name)
             for t, x, y, z in self.get_rotKeysF(dur):
-                fw.keyframe_points.insert(t, math.sqrt(1 - x*x - y*y - z*z))
+                w2 = 1 - x*x - y*y - z*z
+                w = math.sqrt(w2) if w2 > 0 else 0
+                print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
+                fw.keyframe_points.insert(t,  w)
                 fx.keyframe_points.insert(t,  y)
                 fy.keyframe_points.insert(t,  x)
                 fz.keyframe_points.insert(t, -z)
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
+            print("data_path = %s" % data_path)
             fx = action.fcurves.new(data_path, 0, self.name)
             fy = action.fcurves.new(data_path, 1, self.name)
             fz = action.fcurves.new(data_path, 2, self.name)
             for t, x, y, z in self.get_locKeysF(dur):
+                print("%ft %fx %fy %fz" % (t, x, y, z))
                 fx.keyframe_points.insert(t,  y)
                 fy.keyframe_points.insert(t,  x)
                 fz.keyframe_points.insert(t, -z)
@@ -318,6 +324,7 @@ class KeyframeMotion(object):
             print(constraint.dump())
     
     def create_action(self, name):
+        print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
 
         action.AnimProps.Priority = self.priority
@@ -406,6 +413,19 @@ def unregister():
 if __name__ == "__main__":
     # register()
     # load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-x.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
+
+    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
