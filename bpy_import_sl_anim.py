@@ -21,7 +21,7 @@
 bl_info = {
     "name": "SecondLife Animation (ANIM) format",
     "author": "Tapple Gao",
-    "version": (2021, 4, 10),
+    "version": (2021, 4, 12),
     "blender": (2, 74, 0),
     "location": "File > Import-Export",
     "description": "Import SecondLife anim files to Avastar rigs",
