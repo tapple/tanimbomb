@@ -68,6 +68,20 @@ JOINTS_NAMES = [
 ]
 
 
+def make_loc_anim(joint_name, axis, dur=2.0, amplitude=2.0, frames=12):
+    """ make a sinusoidal translation animation on the given bone axis """
+    keys = np.zeros((frames+1, 4))
+    for i in range(frames+1):
+        t = i / frames
+        x = amplitude * sin(2*pi*t)
+        keys[i][0] = t
+        keys[i][axis+1] = x
+    anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0, duration=dur)
+    anim.new_joint(joint_name, locKeysF=keys)
+    axis_name = ['x', 'y', 'z'][axis]
+    anim.serialize_filename('%s_loc_%s.anim' % (joint_name, axis_name))
+
+
 def make_rot_anim(joint_name, axis, dur=2.0, frames=12):
     """ make a looping rotation of joint about axis """
     keys = np.zeros((frames+1, 4))
@@ -88,3 +102,4 @@ def make_rot_anim(joint_name, axis, dur=2.0, frames=12):
 for joint_name in JOINTS_NAMES:
     for axis in range(3):
         make_rot_anim(joint_name, axis)
+        make_loc_anim(joint_name, axis)
