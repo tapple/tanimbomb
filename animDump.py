@@ -58,9 +58,9 @@ class JointMotion(object):
         self.priority = priority
         self.rotKeys = rotKeys or []
         self.locKeys = locKeys or []
-        if rotKeysF is not None:
+        if rotKeysF:
             self.rotKeysF = rotKeysF
-        if locKeysF is not None:
+        if locKeysF:
             self.locKeysF = locKeysF
 
     @property
@@ -89,6 +89,9 @@ class JointMotion(object):
     def rotKeysF(self, value):
         self.rotKeys = self.keys_float_to_int(value)
 
+    def get_rotKeysF(self, dur=1.0, round_zero = True):
+        return self.keys_int_to_float(self.rotKeys, dur=dur, round_zero=round_zero)
+
     @property
     def locKeysF(self):
         return self.keys_int_to_float(self.locKeys, self.LOC_MAX)
@@ -97,11 +100,20 @@ class JointMotion(object):
     def locKeysF(self, value):
         self.locKeys = self.keys_float_to_int(value, self.LOC_MAX)
 
+    def get_locKeysF(self, dur=1.0, round_zero=True):
+        return self.keys_int_to_float(self.locKeys, self.LOC_MAX, dur=dur, round_zero=round_zero)
+
     @classmethod
-    def keys_int_to_float(cls, keys, scale=1.0, dur=1.0):
+    def keys_int_to_float(cls, keys, scale=1.0, dur=1.0, round_zero=True):
         m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
         b = array([0, -scale, -scale, -scale])
-        return keys * m + b
+        ans = keys * m + b
+        if round_zero:
+            for frame in ans:
+                for i in range(1, 4):
+                    if abs(frame[i]) < scale / cls.U16MAX:
+                        frame[i] = 0
+        return ans
 
     @classmethod
     def keys_float_to_int(cls, keys, scale=1.0, dur=1.0):
