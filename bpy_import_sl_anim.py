@@ -103,7 +103,7 @@ class JointMotion(object):
     @rotKeys.setter
     def rotKeys(self, value):
         self._rotKeys = np.array(np.clip(value, 0, self.U16MAX),
-                                 self.U16).reshape((-1, self.KEY_SIZE))
+            self.U16).reshape((-1, self.KEY_SIZE))
 
     @property
     def locKeys(self):
@@ -112,7 +112,7 @@ class JointMotion(object):
     @locKeys.setter
     def locKeys(self, value):
         self._locKeys = np.array(np.clip(value, 0, self.U16MAX),
-                                 self.U16).reshape((-1, self.KEY_SIZE))
+            self.U16).reshape((-1, self.KEY_SIZE))
 
     @property
     def rotKeysF(self):
@@ -122,7 +122,7 @@ class JointMotion(object):
     def rotKeysF(self, value):
         self.rotKeys = self.keys_float_to_int(value)
 
-    def get_rotKeysF(self, dur=1.0, round_zero=True):
+    def get_rotKeysF(self, dur=1.0, round_zero = True):
         return self.keys_int_to_float(self.rotKeys, dur=dur, round_zero=round_zero)
 
     @property
@@ -138,7 +138,7 @@ class JointMotion(object):
 
     @classmethod
     def keys_int_to_float(cls, keys, scale=1.0, dur=1.0, round_zero=True):
-        m = array([dur, 2 * scale, 2 * scale, 2 * scale]) / cls.U16MAX
+        m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
         b = array([0, -scale, -scale, -scale])
         ans = keys * m + b
         if round_zero:
@@ -150,14 +150,14 @@ class JointMotion(object):
 
     @classmethod
     def keys_float_to_int(cls, keys, scale=1.0, dur=1.0):
-        m = array([dur, 2 * scale, 2 * scale, 2 * scale]) / cls.U16MAX
+        m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
         b = array([0, -scale, -scale, -scale])
         return (keys - b) / m
 
     @classmethod
     def deserialize_keys(cls, stream, keyCount):
-        return np.fromfile(stream.base_stream, cls.U16, keyCount * cls.KEY_SIZE
-                           ).reshape((keyCount, cls.KEY_SIZE))
+        return np.fromfile(stream.base_stream, cls.U16, keyCount*cls.KEY_SIZE
+            ).reshape((keyCount, cls.KEY_SIZE))
 
     @classmethod
     def serialize_keys(cls, stream, keys):
@@ -189,7 +189,7 @@ class JointMotion(object):
             fy = action.fcurves.new(data_path, 2, self.name)
             fz = action.fcurves.new(data_path, 3, self.name)
             for t, x, y, z in self.get_rotKeysF(dur):
-                w2 = 1 - x * x - y * y - z * z
+                w2 = 1 - x*x - y*y - z*z
                 w = math.sqrt(w2) if w2 > 0 else 0
                 print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
                 q = Quaternion((w, y, -x, z))
@@ -237,10 +237,10 @@ class JointConstraintSharedData(object):
     def serialize(self, stream):
         stream.pack("BB", self.chainLength, self.type)
         stream.pack("16s3f16s3f3f4f",
-                    self.sourceVolume.encode('ascii'), *self.sourceOffset,
-                    self.targetVolume.encode('ascii'), *self.targetOffset,
-                    *self.targetDir,
-                    self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop)
+            self.sourceVolume.encode('ascii'), *self.sourceOffset,
+            self.targetVolume.encode('ascii'), *self.targetOffset,
+            *self.targetDir,
+            self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop)
 
     def dump(self):
         return "\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" % (
@@ -250,7 +250,7 @@ class JointConstraintSharedData(object):
             self.targetDir,
             self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop,
         )
-
+    
 
 class KeyframeMotion(object):
     def __init__(
@@ -265,7 +265,7 @@ class KeyframeMotion(object):
             easeIn=0.8,
             easeOut=0.8,
             handPosture=1,
-    ):
+            ):
         self.version = 1
         self.subVersion = 0
         self.priority = priority
@@ -285,8 +285,7 @@ class KeyframeMotion(object):
         stream = BinaryStream(file)
         (self.version, self.subVersion, self.priority, self.duration) = stream.unpack("HHif")
         self.emote = stream.readCString().decode('ascii')
-        (self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack(
-            "ffiffii")
+        (self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
         self.joints = list()
         for jointNum in range(jointCount):
             joint = JointMotion()
@@ -304,8 +303,7 @@ class KeyframeMotion(object):
         stream = BinaryStream(file)
         stream.pack("HHif", self.version, self.subVersion, self.priority, self.duration)
         stream.writeCString(self.emote.encode('ascii'))
-        stream.pack("ffiffii", self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture,
-                    len(self.joints))
+        stream.pack("ffiffii", self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, len(self.joints))
         for joint in self.joints:
             joint.serialize(stream)
         stream.pack("i", len(self.constraints))
@@ -336,7 +334,7 @@ class KeyframeMotion(object):
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
             print(constraint.dump())
-
+    
     def create_action(self, name, armature):
         print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
@@ -440,19 +438,28 @@ def unregister():
 if __name__ == "__main__":
     # register()
     # load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-x.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
-    #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-x.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
 
     load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
     load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
     load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
+    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim')
+    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_y.anim')
+    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_z.anim')
