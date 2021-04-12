@@ -1,7 +1,6 @@
-from math import sin, pi
+from math import sin, cos, pi
 import animDump
 import numpy as np
-tau = 2*pi
 
 JOINTS_NAMES = [
     "mPelvis",
@@ -69,20 +68,23 @@ JOINTS_NAMES = [
 ]
 
 
-def make_rot_anim(joint_name, axis, dur=4.0, frames=24):
-    """ make a rotation of joint about axis, making 2 turns"""
+def make_rot_anim(joint_name, axis, dur=2.0, frames=12):
+    """ make a looping rotation of joint about axis """
     keys = np.zeros((frames+1, 4))
     for i in range(frames+1):
-        keys[i][0] = i / frames
-        keys[i][axis+1] = sin(tau * i / frames)
+        t = i / frames
+        x = sin(pi*t)  # pi not tau because quaternion double cover
+        w = cos(pi*t)
+        if w < 0:
+            x = -x
+        keys[i][0] = t
+        keys[i][axis+1] = x
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0, duration=dur)
     anim.new_joint(joint_name, rotKeysF=keys)
     axis_name = ['x', 'y', 'z'][axis]
     anim.serialize_filename('%s_rot_%s.anim' % (joint_name, axis_name))
 
 
-make_rot_anim("mPelvis", 0)
-
-# for joint_name in JOINTS_NAMES:
-#     for axis in range(3):
-#         make_rot_anim(joint_name, axis)
+for joint_name in JOINTS_NAMES:
+    for axis in range(3):
+        make_rot_anim(joint_name, axis)
