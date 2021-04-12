@@ -38,6 +38,7 @@ import numpy as np
 import bpy
 from bpy.props import StringProperty
 from bpy_extras.io_utils import ImportHelper
+from mathutils import Vector, Quaternion, Matrix
 
 
 def array(*args, **kwargs):
@@ -177,7 +178,9 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
-    def create_fcurves(self, action, dur):
+    def create_fcurves(self, action, dur, armature):
+        bone_rot = armature.data.bones[self.name].matrix.to_quaternion()
+        bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
             print("data_path = %s" % data_path)
@@ -189,10 +192,12 @@ class JointMotion(object):
                 w2 = 1 - x*x - y*y - z*z
                 w = math.sqrt(w2) if w2 > 0 else 0
                 print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
-                fw.keyframe_points.insert(t,  w)
-                fx.keyframe_points.insert(t,  y)
-                fy.keyframe_points.insert(t,  x)
-                fz.keyframe_points.insert(t, -z)
+                q = Quaternion((w, y, -x, z))
+                q = bone_rot_inv * q * bone_rot
+                fw.keyframe_points.insert(t, q.w)
+                fx.keyframe_points.insert(t, q.x)
+                fy.keyframe_points.insert(t, q.y)
+                fz.keyframe_points.insert(t, q.z)
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
             print("data_path = %s" % data_path)
@@ -201,9 +206,11 @@ class JointMotion(object):
             fz = action.fcurves.new(data_path, 2, self.name)
             for t, x, y, z in self.get_locKeysF(dur):
                 print("%ft %fx %fy %fz" % (t, x, y, z))
-                fx.keyframe_points.insert(t,  y)
-                fy.keyframe_points.insert(t,  x)
-                fz.keyframe_points.insert(t, -z)
+                v = Vector((y, -x, z))
+                v.rotate(bone_rot_inv)
+                fx.keyframe_points.insert(t, v.x)
+                fy.keyframe_points.insert(t, v.y)
+                fz.keyframe_points.insert(t, v.z)
         data_path = 'pose.bones["%s"]["priority"]' % self.name
         f = action.fcurves.new(data_path, 0, self.name)
         f.keyframe_points.insert(0, self.priority)
@@ -328,9 +335,10 @@ class KeyframeMotion(object):
         for constraint in self.constraints:
             print(constraint.dump())
     
-    def create_action(self, name):
+    def create_action(self, name, armature):
         print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
+        armature.animation_data.action = action
 
         action.AnimProps.Priority = self.priority
         action.AnimProps.frame_start = 0
@@ -344,7 +352,7 @@ class KeyframeMotion(object):
         action.AnimProps.Hand_Posture = str(self.handPosture)
         action.AnimProps.fps = self.frameRate
         for joint in self.joints:
-            joint.create_fcurves(action, self.duration * self.frameRate)
+            joint.create_fcurves(action, self.duration * self.frameRate, armature)
         for cu in action.fcurves:
             for bez in cu.keyframe_points:
                 bez.interpolation = 'LINEAR'
@@ -376,14 +384,26 @@ class KeyframeMotion(object):
         raise KeyError(item)
 
 
-def load(filename):
+def active_armature():
+    if type(bpy.context.active_object.data) == bpy.types.Armature:
+        return bpy.context.active_object
+    if bpy.context.active_object.find_armature():
+        return bpy.context.active_object.find_armature()
+    if bpy.data.armatures:
+        return bpy.data.armatures[0]
+    raise RuntimeError("Please select an armature before importing")
+
+
+def load(filename, armature=None):
     filepath = Path(filename)
+    if not armature:
+        armature = active_armature()
     with open(filename, 'rb') as file:
         anim = KeyframeMotion()
         anim.deserialize(file)
         # anim.summarize(file.name)
         # anim.dump()
-        print(anim.create_action(filepath.stem))
+        print(anim.create_action(filepath.stem, armature))
 
 
 class ImportANIM(bpy.types.Operator, ImportHelper):
