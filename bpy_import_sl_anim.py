@@ -36,7 +36,8 @@ import math
 from pathlib import Path
 import numpy as np
 import bpy
-from bpy.props import StringProperty
+import os
+from bpy.props import StringProperty, CollectionProperty
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Quaternion, Matrix
 
@@ -414,13 +415,17 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
 
     filename_ext = ".anim"
     filter_glob = StringProperty(default="*.anim", options={'HIDDEN'})
+    files = CollectionProperty(type=bpy.types.PropertyGroup)
 
     def execute(self, context):
-        print(self.as_keywords())
-        load(self.filepath)
+        folder = os.path.dirname(self.filepath)
+        for file in self.files:
+            filename = os.path.join(folder, file.name)
+            load(filename)
         return {'FINISHED'}
 
 
+# Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(ImportANIM.bl_idname, text="SL Animation (.anim)")
 
@@ -436,8 +441,9 @@ def unregister():
 
 
 if __name__ == "__main__":
-    # register()
-    # load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
+#    register()
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_sit3.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
@@ -445,18 +451,18 @@ if __name__ == "__main__":
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
 
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_y.anim')
-    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_z.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_y.anim')
+#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_z.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_x.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_y.anim')
 #    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_z.anim')
