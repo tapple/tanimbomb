@@ -21,7 +21,7 @@
 bl_info = {
     "name": "SecondLife Animation (ANIM) format",
     "author": "Tapple Gao",
-    "version": (2021, 4, 12),
+    "version": (2021, 4, 13),
     "blender": (2, 74, 0),
     "location": "File > Import-Export",
     "description": "Import SecondLife anim files to Avastar rigs",
@@ -345,9 +345,9 @@ class KeyframeMotion(object):
         action.AnimProps.frame_start = 0
         action.AnimProps.frame_end = self.duration * self.frameRate + 0.5
         # action.AnimProps.??? = self.emote
+        action.AnimProps.Loop = self.loop
         action.AnimProps.Loop_In = self.loopIn * self.frameRate + 0.5
         action.AnimProps.Loop_Out = self.loopOut * self.frameRate + 0.5
-        action.AnimProps.Loop = self.loop
         action.AnimProps.Ease_In = self.easeIn
         action.AnimProps.Ease_Out = self.easeOut
         action.AnimProps.Hand_Posture = str(self.handPosture)
@@ -442,8 +442,9 @@ def unregister():
 
 if __name__ == "__main__":
 #    register()
+    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Animation Tab/TH_lay1.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_sit3.anim')
+#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_sit3.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
 #    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
