@@ -294,8 +294,8 @@ class KeyframeMotion(object):
             self.duration, "  looped" if self.loop else "unlooped")
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
-            format = '%s%2d|' if markdown else '%s at %2dfps'
-            summary = format % (summary, frame_rate)
+            format = '%s%2d|%4d|' if markdown else '%s at %2dfps (%4d frames)'
+            summary = format % (summary, frame_rate, self.duration * frame_rate)
         if filename:
             format = '|%s%s' if markdown else '%s: %s'
             summary = format % (filename, summary)
@@ -688,8 +688,8 @@ if __name__ == '__main__':
         max_file_len = max(len(file.name) for file in args.files)
         format = f"%-{max_file_len}s"
         if args.markdown:
-            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|')
-            print('|--------|--:|---:|---:|---:|--:|---:|--:|')
+            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|')
+            print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|')
         for file in args.files:
             anim = KeyframeMotion()
             anim.deserialize(file)
