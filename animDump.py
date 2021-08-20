@@ -288,9 +288,9 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        summary = 'P%d %dR %dL %dC %.1fs %s' % (
+        summary = 'P%d %2dR %2dL %dC %4.1fs %s' % (
             self.priority, rotJointCount, locJointCount, len(self.constraints),
-            self.duration, "looped" if self.loop else "unlooped")
+            self.duration, "  looped" if self.loop else "unlooped")
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
             summary = '%s at %dfps' % (summary, frame_rate)
@@ -681,10 +681,12 @@ if __name__ == '__main__':
 
     if args.outputfiles is None:
         # summarize all files
+        max_file_len = max(len(file.name) for file in args.files)
+        format = f"%-{max_file_len}s"
         for file in args.files:
             anim = KeyframeMotion()
             anim.deserialize(file)
-            anim.summarize(file.name)
+            anim.summarize(format % file.name)
             if (args.verbose > 0):
                 anim.dump()
 
