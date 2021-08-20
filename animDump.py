@@ -288,7 +288,7 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        summary = 'P%d %2dR %2dL %dC %4.1fs %s' % (
+        summary = 'P%d %2dR %2dL %2dC %4.1fs %s' % (
             self.priority, rotJointCount, locJointCount, len(self.constraints),
             self.duration, "  looped" if self.loop else "unlooped")
         frame_rate = self.calculate_frame_rate()
