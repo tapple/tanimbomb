@@ -293,7 +293,7 @@ class KeyframeMotion(object):
             self.duration, "  looped" if self.loop else "unlooped")
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
-            summary = '%s at %dfps' % (summary, frame_rate)
+            summary = '%s at %2dfps' % (summary, frame_rate)
         if filename:
             summary = '%s: %s' % (filename, summary)
         return summary
