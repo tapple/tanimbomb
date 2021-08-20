@@ -264,13 +264,34 @@ class KeyframeMotion(object):
         for constraint in self.constraints:
             print(constraint.dump())
 
+    def all_keyframe_times(self):
+        locKeys = np.concatenate([joint.locKeys[:,0] for joint in self.joints])
+        rotKeys = np.concatenate([joint.rotKeys[:,0] for joint in self.joints])
+        return np.unique(np.concatenate((locKeys, rotKeys)))
+
+    def calculate_frame_rate(self):
+        diff_keys = np.diff(self.all_keyframe_times())
+        if diff_keys.size == 0:
+            return None
+        frame_time = np.min(diff_keys)
+        err = diff_keys / frame_time
+        err = err / np.floor(err) - 1
+        if np.max(err) > 0.05:
+            return None
+        return int(JointMotion.U16MAX / self.duration / frame_time)
+
     def summary(self, filename=None):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        summary = 'P%d %dR %dL %dC' % (self.priority, rotJointCount, locJointCount, len(self.constraints))
+        summary = 'P%d %dR %dL %dC %.1fs %s' % (
+            self.priority, rotJointCount, locJointCount, len(self.constraints),
+            self.duration, "looped" if self.loop else "unlooped")
+        frame_rate = self.calculate_frame_rate()
+        if frame_rate:
+            summary = '%s at %dfps' % (summary, frame_rate)
         if filename:
             summary = '%s: %s' % (filename, summary)
         return summary
