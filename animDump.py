@@ -274,11 +274,13 @@ class KeyframeMotion(object):
         if diff_keys.size == 0:
             return None
         frame_time = np.min(diff_keys)
-        err = diff_keys / frame_time
-        err = err / np.floor(err) - 1
-        if np.max(err) > 0.05:
-            return None
-        return int(JointMotion.U16MAX / self.duration / frame_time)
+        for tries in range(5):
+            diff_frames = diff_keys / frame_time
+            err = np.abs(diff_frames / np.rint(diff_frames) - 1)
+            if np.max(err) < 0.05:
+                return np.rint(JointMotion.U16MAX / self.duration / frame_time)
+            frame_time *= np.max(diff_frames - np.floor(diff_frames))
+        return None
 
     def summary(self, filename=None):
         rotJointCount = 0
