@@ -688,8 +688,8 @@ if __name__ == '__main__':
         max_file_len = max(len(file.name) for file in args.files)
         format = f"%-{max_file_len}s"
         if args.markdown:
-            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|')
-            print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|')
+            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|Comment|')
+            print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|-------|')
         for file in args.files:
             anim = KeyframeMotion()
             anim.deserialize(file)
