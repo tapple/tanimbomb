@@ -282,24 +282,27 @@ class KeyframeMotion(object):
             frame_time *= np.max(diff_frames - np.floor(diff_frames))
         return None
 
-    def summary(self, filename=None):
+    def summary(self, filename=None, markdown=False):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        summary = 'P%d %2dR %2dL %2dC %5.2fs %s' % (
-            self.priority, rotJointCount, locJointCount, len(self.constraints),
+        format = '|%d|%2d|%2d|%2d|%5.2f|%s|' if markdown else 'P%d %2dR %2dL %2dC %5.2fs %s'
+        summary = format % (
+        self.priority, rotJointCount, locJointCount, len(self.constraints),
             self.duration, "  looped" if self.loop else "unlooped")
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
-            summary = '%s at %2dfps' % (summary, frame_rate)
+            format = '%s%2d|' if markdown else '%s at %2dfps'
+            summary = format % (summary, frame_rate)
         if filename:
-            summary = '%s: %s' % (filename, summary)
+            format = '|%s%s' if markdown else '%s: %s'
+            summary = format % (filename, summary)
         return summary
 
-    def summarize(self, filename=None):
-        print(self.summary(filename))
+    def summarize(self, filename=None, markdown=False):
+        print(self.summary(filename, markdown))
 
     def new_joint(self, name, priority=None, **kwargs):
         joint = JointMotion(name, self.priority if priority is None else priority, **kwargs)
@@ -613,6 +616,7 @@ if __name__ == '__main__':
     parser.add_argument('files', type=argparse.FileType('rb'), nargs='+',
                         help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
     parser.add_argument('--outputfiles', '-o', type=argparse.FileType('wb'),
             nargs='*')
 
@@ -683,10 +687,13 @@ if __name__ == '__main__':
         # summarize all files
         max_file_len = max(len(file.name) for file in args.files)
         format = f"%-{max_file_len}s"
+        if args.markdown:
+            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|')
+            print('|--------|---|----|----|----|---|----|---|')
         for file in args.files:
             anim = KeyframeMotion()
             anim.deserialize(file)
-            anim.summarize(format % file.name)
+            anim.summarize(format % file.name, markdown=args.markdown)
             if (args.verbose > 0):
                 anim.dump()
 
