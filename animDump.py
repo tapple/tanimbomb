@@ -5,6 +5,7 @@ import fnmatch
 import struct
 import copy
 import sys
+from pathlib import Path
 import numpy as np
 
 
@@ -630,8 +631,7 @@ if __name__ == '__main__':
                         help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
-    parser.add_argument('--outputfiles', '-o', type=argparse.FileType('wb'),
-            nargs='*')
+    parser.add_argument('--outputfile-pattern', '-o')
 
     parser.add_argument('--scale', '--speed', '-s', action=AppendObjectAction,
             dest='actions', func=SpeedAnimation, nargs=1, type=float)
@@ -698,31 +698,32 @@ if __name__ == '__main__':
     if (args.verbose >= 2):
         print(args)
 
-    if args.outputfiles is None:
+    if args.markdown:
+        print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|Comment|')
+        print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|-------|')
+    if args.outputfile_pattern is None:
         # summarize all files
         max_file_len = max(len(file.name) for file in args.files)
         format = f"%-{max_file_len}s"
-        if args.markdown:
-            print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|Comment|')
-            print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|-------|')
         for file in args.files:
             anim = KeyframeMotion()
             anim.deserialize(file)
             anim.summarize(format % file.name, markdown=args.markdown)
             if (args.verbose > 0):
                 anim.dump()
-
-    else:
-        # convert files
-        if (len(args.files) != len(args.outputfiles)):
-            print("different number of input and output files")
-            sys.exit();
-        for inputFile,outputFile in zip(args.files, args.outputfiles):
+    else:  # convert files
+        input_paths = [Path(file.name) for file in args.files]
+        output_files = [open(
+            f"{args.outputfile_pattern}{{suffix}}".format(path.stem, suffix=path.suffix),
+            "wb") for path in input_paths]
+        max_file_len = max(len(file.name) for file in output_files)
+        format = f"%-{max_file_len}s"
+        for input_file, output_file in zip(args.files, output_files):
             anim = KeyframeMotion()
-            anim.deserialize(inputFile)
+            anim.deserialize(input_file)
             for action in args.actions:
                 action(anim)
-            anim.summarize(outputFile.name)
+            anim.summarize(format % output_file.name, markdown=args.markdown)
             if (args.verbose > 0):
                 anim.dump()
-            anim.serialize(outputFile)
+            anim.serialize(output_file)
