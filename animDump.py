@@ -354,6 +354,19 @@ class SpeedAnimation(AnimTransform):
         anim.loopOut *= self.factor
 
 
+class SetFrameRate(AnimTransform):
+    def __init__(self, target_frame_rate):
+        self.target_frame_rate = target_frame_rate
+
+    def __call__(self, anim):
+        frame_rate = anim.calculate_frame_rate()
+        if frame_rate:
+            factor = frame_rate / self.target_frame_rate
+            anim.duration *= factor
+            anim.loopIn *= factor
+            anim.loopOut *= factor
+
+
 class OffsetJoint(AnimTransform):
     def __init__(self, *args):
         self.joint = 'mPelvis'
@@ -622,6 +635,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--scale', '--speed', '-s', action=AppendObjectAction,
             dest='actions', func=SpeedAnimation, nargs=1, type=float)
+    parser.add_argument('--frame-rate', '--fps', action=AppendObjectAction,
+                        dest='actions', func=SetFrameRate, nargs=1, type=int)
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
                         dest='actions', func=OffsetJoint, nargs='+',
                         help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
