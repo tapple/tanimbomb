@@ -241,12 +241,12 @@ class KeyframeMotion(object):
             constraint.serialize(stream)
 
     def deserialize_filename(self, filename):
-        print("reading " + filename)
+        # print("reading " + filename)
         with open(filename, 'rb') as f:
             return self.deserialize(f)
 
     def serialize_filename(self, filename):
-        print("writing " + filename)
+        # print("writing " + filename)
         with open(filename, 'wb') as f:
             self.serialize(f)
 
@@ -624,13 +624,19 @@ class AppendObjectAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
+def output_filename(input_filename):
+    if args.outputfile_pattern is None:
+        return input_filename
+    input_path = Path(input_filename)
+    return f"{args.outputfile_pattern}{{suffix}}".format(input_path.stem, suffix=input_path.suffix)
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files',
             fromfile_prefix_chars='@')
-    parser.add_argument('files', type=argparse.FileType('rb'), nargs='+',
-                        help='anim files to dump or process')
+    parser.add_argument('files', nargs='+', help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
     parser.add_argument('--outputfile-pattern', '-o')
@@ -703,29 +709,15 @@ if __name__ == '__main__':
     if args.markdown:
         print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|FPS|Frames|')
         print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|--:|-----:|')
-    if args.outputfile_pattern is None:
-        # summarize all files
-        max_file_len = max(len(file.name) for file in args.files)
-        format = f"%-{max_file_len}s"
-        for file in args.files:
-            anim = KeyframeMotion()
-            anim.deserialize(file)
-            anim.summarize(format % file.name, markdown=args.markdown)
-            if (args.verbose > 0):
-                anim.dump()
-    else:  # convert files
-        input_paths = [Path(file.name) for file in args.files]
-        output_files = [open(
-            f"{args.outputfile_pattern}{{suffix}}".format(path.stem, suffix=path.suffix),
-            "wb") for path in input_paths]
-        max_file_len = max(len(file.name) for file in output_files)
-        format = f"%-{max_file_len}s"
-        for input_file, output_file in zip(args.files, output_files):
-            anim = KeyframeMotion()
-            anim.deserialize(input_file)
-            for action in args.actions:
-                action(anim)
-            anim.summarize(format % output_file.name, markdown=args.markdown)
-            if (args.verbose > 0):
-                anim.dump()
-            anim.serialize(output_file)
+    max_file_len = max(len(output_filename(file)) for file in args.files)
+    format = f"%-{max_file_len}s"
+    for filename in args.files:
+        anim = KeyframeMotion()
+        anim.deserialize_filename(filename)
+        for action in args.actions:
+            action(anim)
+        anim.summarize(format % output_filename(filename), markdown=args.markdown)
+        if (args.verbose > 0):
+            anim.dump()
+        if args.outputfile_pattern:
+            anim.serialize_filename(output_filename(filename))
