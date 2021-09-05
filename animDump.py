@@ -289,10 +289,12 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        format = '|%d|%2d|%2d|%2d|%5.2f|%s|' if markdown else 'P%d %2dR %2dL %2dC %5.2fs %s'
+        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%5.2f|%s|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %5.2fs %s'
         summary = format % (
-        self.priority, rotJointCount, locJointCount, len(self.constraints),
-            self.duration, "  looped" if self.loop else "unlooped")
+            self.priority, rotJointCount, locJointCount, len(self.constraints),
+            self.easeIn, self.easeOut,
+            self.duration, "  looped" if self.loop else "unlooped",
+        )
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
             format = '%s%2d|%4d|' if markdown else '%s at %2dfps (%4d frames)'
@@ -699,8 +701,8 @@ if __name__ == '__main__':
         print(args)
 
     if args.markdown:
-        print('|Filename|Pri|Rots|Locs|Cons|Dur|Loop|FPS|Frames|Comment|')
-        print('|--------|--:|---:|---:|---:|--:|---:|--:|-----:|-------|')
+        print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|FPS|Frames|')
+        print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|--:|-----:|')
     if args.outputfile_pattern is None:
         # summarize all files
         max_file_len = max(len(file.name) for file in args.files)
