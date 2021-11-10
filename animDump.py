@@ -250,7 +250,7 @@ class KeyframeMotion(object):
         with open(filename, 'wb') as f:
             self.serialize(f)
 
-    def dump(self):
+    def dump(self, keys=False):
         print("version: %d.%d" % (self.version, self.subVersion))
         print("priority: %d" % (self.priority,))
         print("duration: %f" % (self.duration,))
@@ -260,6 +260,9 @@ class KeyframeMotion(object):
         print('joints: %d' % (len(self.joints),))
         for joint in self.joints:
             print('\t%s' % joint)
+            if keys:
+                print('\t\tR:%s' % joint.rotKeys.tobytes().hex())
+                print('\t\tL:%s' % joint.locKeys.tobytes().hex())
 
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
@@ -703,9 +706,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     _ensure_value(args, 'actions', [])
 
-    if (args.verbose >= 2):
-        print(args)
-
     if args.markdown:
         print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|FPS|Frames|')
         print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|--:|-----:|')
@@ -718,6 +718,6 @@ if __name__ == '__main__':
             action(anim)
         anim.summarize(format % output_filename(filename), markdown=args.markdown)
         if (args.verbose > 0):
-            anim.dump()
+            anim.dump(args.verbose > 1)
         if args.outputfile_pattern:
             anim.serialize_filename(output_filename(filename))
