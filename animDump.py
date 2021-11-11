@@ -272,6 +272,8 @@ class KeyframeMotion(object):
             print(constraint.dump())
 
     def all_keyframe_times(self):
+        if not self.joints:
+            return np.array([], dtype=JointMotion.U16)
         locKeys = np.concatenate([joint.locKeys[:,0] for joint in self.joints])
         rotKeys = np.concatenate([joint.rotKeys[:,0] for joint in self.joints])
         return np.unique(np.concatenate((locKeys, rotKeys)))
