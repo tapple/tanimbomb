@@ -250,7 +250,7 @@ class KeyframeMotion(object):
         with open(filename, 'wb') as f:
             self.serialize(f)
 
-    def dump(self, keys=False):
+    def dump(self, keys=False, sort=True):
         print("version: %d.%d" % (self.version, self.subVersion))
         print("priority: %d" % (self.priority,))
         print("duration: %f" % (self.duration,))
@@ -258,7 +258,10 @@ class KeyframeMotion(object):
         print('loop: %d (%f - %f)' % (self.loop, self.loopIn, self.loopOut))
         print('ease: %f - %f' % (self.easeIn, self.easeOut))
         print('joints: %d' % (len(self.joints),))
-        for joint in self.joints:
+        joints = self.joints
+        if sort:
+            joints.sort(key=lambda joint: joint.name)
+        for joint in joints:
             print('\t%s' % joint)
             if keys:
                 print('\t\tR:%s' % joint.rotKeys.tobytes().hex())
@@ -641,6 +644,8 @@ if __name__ == '__main__':
             fromfile_prefix_chars='@')
     parser.add_argument('files', nargs='+', help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
+    parser.add_argument('--no-sort', '-U', action='store_false', dest='sort',
+                        help="when printing joints with -v, show in file order rather than abc order")
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
     parser.add_argument('--outputfile-pattern', '-o')
 
@@ -717,7 +722,7 @@ if __name__ == '__main__':
         for action in args.actions:
             action(anim)
         anim.summarize(format % output_filename(filename), markdown=args.markdown)
-        if (args.verbose > 0):
-            anim.dump(args.verbose > 1)
+        if args.verbose > 0:
+            anim.dump(keys=args.verbose > 1, sort=args.sort)
         if args.outputfile_pattern:
             anim.serialize_filename(output_filename(filename))
