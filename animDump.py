@@ -190,8 +190,8 @@ class KeyframeMotion(object):
             priority=3,
             duration=0.0,
             emote='',
-            loopIn=0.0,
-            loopOut=None,
+            loop_start=0.0,
+            loop_end=-0.0,
             loop=1,
             easeIn=0.8,
             easeOut=0.8,
@@ -202,8 +202,8 @@ class KeyframeMotion(object):
         self.priority = priority
         self.duration = duration
         self.emote = emote
-        self.loopIn = loopIn
-        self.loopOut = duration if loopOut is None else loopOut
+        self.loop_start = loop_start
+        self.loop_end = loop_end
         self.loop = loop
         self.easeIn = easeIn
         self.easeOut = easeOut
@@ -211,11 +211,33 @@ class KeyframeMotion(object):
         self.joints = list()
         self.constraints = list()
 
+    @property
+    def loop_start(self):
+        return self._loop_start
+
+    @loop_start.setter
+    def loop_start(self, value):
+        if np.copysign(1, value) < 0:  # negative, including -0
+            self._loop_start = self.duration + value
+        else:
+            self._loop_start = value
+
+    @property
+    def loop_end(self):
+        return self._loop_end
+
+    @loop_end.setter
+    def loop_end(self, value):
+        if np.copysign(1, value) < 0:  # negative, including -0
+            self._loop_end = self.duration + value
+        else:
+            self._loop_end = value
+
     def deserialize(self, file):
         stream = BinaryStream(file)
         (self.version, self.subVersion, self.priority, self.duration) = stream.unpack("HHif")
         self.emote = stream.readCString().decode('ascii')
-        (self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
+        (self.loop_start, self.loop_end, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
         self.joints = list()
         for jointNum in range(jointCount):
             joint = JointMotion()
@@ -233,7 +255,7 @@ class KeyframeMotion(object):
         stream = BinaryStream(file)
         stream.pack("HHif", self.version, self.subVersion, self.priority, self.duration)
         stream.writeCString(self.emote.encode('ascii'))
-        stream.pack("ffiffii", self.loopIn, self.loopOut, self.loop, self.easeIn, self.easeOut, self.handPosture, len(self.joints))
+        stream.pack("ffiffii", self.loop_start, self.loop_end, self.loop, self.easeIn, self.easeOut, self.handPosture, len(self.joints))
         for joint in self.joints:
             joint.serialize(stream)
         stream.pack("i", len(self.constraints))
@@ -255,7 +277,7 @@ class KeyframeMotion(object):
         print("priority: %d" % (self.priority,))
         print("duration: %f" % (self.duration,))
         print('emote: "%s"' % (self.emote,))
-        print('loop: %d (%f - %f)' % (self.loop, self.loopIn, self.loopOut))
+        print('loop: %d (%f - %f)' % (self.loop, self.loop_start, self.loop_end))
         print('ease: %f - %f' % (self.easeIn, self.easeOut))
         print('joints: %d' % (len(self.joints),))
         joints = self.joints
@@ -361,8 +383,8 @@ class SpeedAnimation(AnimTransform):
 
     def __call__(self, anim):
         anim.duration *= self.factor
-        anim.loopIn *= self.factor
-        anim.loopOut *= self.factor
+        anim.loop_start *= self.factor
+        anim.loop_end *= self.factor
 
 
 class SetFrameRate(AnimTransform):
@@ -374,8 +396,8 @@ class SetFrameRate(AnimTransform):
         if frame_rate:
             factor = frame_rate / self.target_frame_rate
             anim.duration *= factor
-            anim.loopIn *= factor
-            anim.loopOut *= factor
+            anim.loop_start *= factor
+            anim.loop_end *= factor
 
 
 class OffsetJoint(AnimTransform):
@@ -675,10 +697,10 @@ if __name__ == '__main__':
             key='loop', type=int)
     parser.add_argument('--loop-start', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
-            key='loopIn', type=float)
+            key='loop_start', type=float)
     parser.add_argument('--loop-end', action=AppendObjectAction,
             dest='actions', func=SetAnimProperty, nargs=1,
-            key='loopOut', type=float)
+            key='loop_end', type=float)
 
     parser.add_argument('--drop-loc', action=AppendObjectAction,
             dest='actions', func=TransformJointsMatching, nargs='*',
