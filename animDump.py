@@ -237,7 +237,7 @@ class KeyframeMotion(object):
         stream = BinaryStream(file)
         (self.version, self.subVersion, self.priority, self.duration) = stream.unpack("HHif")
         self.emote = stream.readCString().decode('ascii')
-        (self.loop_start, self.loop_end, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
+        (self._loop_start, self._loop_end, self.loop, self.easeIn, self.easeOut, self.handPosture, jointCount) = stream.unpack("ffiffii")
         self.joints = list()
         for jointNum in range(jointCount):
             joint = JointMotion()
