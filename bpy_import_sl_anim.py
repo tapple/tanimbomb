@@ -179,7 +179,7 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
-    def create_fcurves(self, action, dur, armature):
+    def create_fcurves(self, action, dur, armature, nt=-0.01):
         bone_rot = armature.data.bones[self.name].matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
@@ -189,12 +189,22 @@ class JointMotion(object):
             fx = action.fcurves.new(data_path, 1, self.name)
             fy = action.fcurves.new(data_path, 2, self.name)
             fz = action.fcurves.new(data_path, 3, self.name)
+            qp = Quaternion((0, 0, 0, 0))
+            negate = False
             for t, x, y, z in self.get_rotKeysF(dur):
                 w2 = 1 - x*x - y*y - z*z
                 w = math.sqrt(w2) if w2 > 0 else 0
                 # print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
                 q = Quaternion((w, y, -x, z))
                 q = bone_rot_inv * q * bone_rot
+                # if less than nt (negation threshold), than both sign changed,
+                # and both items were abs > 0.1
+                if q.x*qp.x < nt and q.y*qp.y < nt and q.z*qp.z < nt:
+                    # print("negating bone %s at t=%f" % (self.name, t))
+                    negate = not negate
+                qp = q
+                if negate:
+                    q = -q
                 fw.keyframe_points.insert(t, q.w)
                 fx.keyframe_points.insert(t, q.x)
                 fy.keyframe_points.insert(t, q.y)
