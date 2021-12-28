@@ -319,12 +319,14 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%5.2f|%s|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %5.2fs %s'
+        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %5.2fs %s (%5.2fin + %5.2f + %5.2fout)'
         summary = format % (
             self.priority, rotJointCount, locJointCount, len(self.constraints),
             self.easeIn, self.easeOut,
             self.duration, "  looped" if self.loop else "unlooped",
+            self.loop_start, self.loop_end - self.loop_start, self.duration - self.loop_end,
         )
+
         frame_rate = self.calculate_frame_rate()
         if frame_rate:
             format = '%s%2d|%4d|' if markdown else '%s at %2dfps (%4d frames)'
@@ -736,8 +738,8 @@ if __name__ == '__main__':
     _ensure_value(args, 'actions', [])
 
     if args.markdown:
-        print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|FPS|Frames|')
-        print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|--:|-----:|')
+        print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|L In|L Dur|L Out|FPS|Frames|')
+        print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|---:|----:|----:|--:|-----:|')
     max_file_len = max(len(output_filename(file)) for file in args.files)
     format = f"%-{max_file_len}s"
     for filename in args.files:
