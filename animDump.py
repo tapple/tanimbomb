@@ -70,7 +70,7 @@ class JointMotion(object):
 
     @rotKeys.setter
     def rotKeys(self, value):
-        self._rotKeys = np.array(np.clip(value, 0, self.U16MAX),
+        self._rotKeys = np.array(np.round(np.clip(value, 0, self.U16MAX)),
             self.U16).reshape((-1, self.KEY_SIZE))
 
     @property
@@ -79,7 +79,7 @@ class JointMotion(object):
 
     @locKeys.setter
     def locKeys(self, value):
-        self._locKeys = np.array(np.clip(value, 0, self.U16MAX),
+        self._locKeys = np.array(np.round(np.clip(value, 0, self.U16MAX)),
             self.U16).reshape((-1, self.KEY_SIZE))
 
     @property
