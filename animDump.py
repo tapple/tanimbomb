@@ -319,7 +319,7 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %5.2fs %s (%5.2fin + %5.2f + %5.2fout)'
+        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %5.3fs %s (%5.2fin + %5.2f + %5.2fout)'
         summary = format % (
             self.priority, rotJointCount, locJointCount, len(self.constraints),
             self.easeIn, self.easeOut,
