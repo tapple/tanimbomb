@@ -1,5 +1,5 @@
 import animDump
-#import numpy
+import numpy
 
 def make_tail_adjust(z, y):
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0)
@@ -17,13 +17,18 @@ def make_tail_length(scale):
     anim.serialize_filename('tail_length_x%+.2f.anim' % (scale))
 
 
-"""
-for z in numpy.arange(-0.42, -0.51, -0.02):
-    for y in numpy.arange(-0.20, -0.01, 0.02):
+for z in numpy.arange(-0.50, -0.01, 0.02):
+    # for y in numpy.arange(-0.20, -0.01, 0.02):
+    #     make_tail_adjust(z, y)
+    for y in numpy.arange(0.92, 1.21, 0.02):  # split so that 0 has + sign
         make_tail_adjust(z, y)
-    for y in numpy.arange(0.00, 0.11, 0.02):  # split so that 0 has + sign
+for z in numpy.arange(0.0, 0.31, 0.02):
+    # for y in numpy.arange(-0.20, -0.01, 0.02):
+    #     make_tail_adjust(z, y)
+    for y in numpy.arange(0.92, 1.21, 0.02):  # split so that 0 has + sign
         make_tail_adjust(z, y)
-"""
 
+"""
 for scale in range(1, 81):
     make_tail_length(scale*0.05)
+"""
