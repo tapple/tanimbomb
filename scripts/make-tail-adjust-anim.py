@@ -1,6 +1,11 @@
 import animDump
 import numpy
 
+def make_avatar_center_adjust(x, y, z):
+    anim = animDump.KeyframeMotion(priority=6, easeIn=0.1, easeOut=0.1)
+    anim.new_joint('Avatar Center', locKeysF=[[0.0, x*2.5, y*2.5, z*2.5]])
+    anim.serialize_filename('Avatar_Center_%d_%d_%d.anim' % (x, y, z))
+
 def make_tail_adjust(z, y):
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0)
     anim.new_joint('mTail1', locKeysF=[[0.0, -y-0.116, 0.0, z+0.047]])
@@ -16,7 +21,7 @@ def make_tail_length(scale):
     anim.new_joint('mTail6', locKeysF=[[0.0, -0.094*scale, 0.0, 0.0]])
     anim.serialize_filename('tail_length_x%+.2f.anim' % (scale))
 
-
+"""
 for z in numpy.arange(-0.50, -0.01, 0.02):
     # for y in numpy.arange(-0.20, -0.01, 0.02):
     #     make_tail_adjust(z, y)
@@ -27,8 +32,14 @@ for z in numpy.arange(0.0, 0.31, 0.02):
     #     make_tail_adjust(z, y)
     for y in numpy.arange(0.92, 1.21, 0.02):  # split so that 0 has + sign
         make_tail_adjust(z, y)
+"""
 
 """
 for scale in range(1, 81):
     make_tail_length(scale*0.05)
 """
+
+for x in range(-2, 3):
+    for y in range(-2, 3):
+        for z in range(-2, 3):
+            make_avatar_center_adjust(x, y, z)
