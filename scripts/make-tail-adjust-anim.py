@@ -2,9 +2,10 @@ import animDump
 import numpy
 
 def make_avatar_center_adjust(x, y, z):
-    anim = animDump.KeyframeMotion(priority=6, easeIn=0.1, easeOut=0.1)
-    anim.new_joint('Avatar Center', locKeysF=[[0.0, x*2.5, y*2.5, z*2.5]])
-    anim.serialize_filename('Avatar_Center_%d_%d_%d.anim' % (x, y, z))
+    anim = animDump.KeyframeMotion(priority=6, easeIn=0.1, easeOut=0.1, loop_start=0, loop_end=0, duration=0.1)
+    anim.new_joint('Avatar Center', locKeysF=[[0.0, x*2.5, y*2.5, z*2.5], [1.0, 0.0, 0.0, 0.0]])
+    # anim.serialize_filename('Avatar_Center_%d_%d_%d.anim' % (x, y, z))
+    anim.serialize_filename('Avatar Center %.1f %.1f %.1f.anim' % (x*2.5, y*2.5, z*2.5))
 
 def make_tail_adjust(z, y):
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0)
