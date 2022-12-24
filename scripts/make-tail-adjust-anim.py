@@ -7,6 +7,11 @@ def make_avatar_center_adjust(x, y, z):
     # anim.serialize_filename('Avatar_Center_%d_%d_%d.anim' % (x, y, z))
     anim.serialize_filename('Avatar Center %.1f %.1f %.1f.anim' % (x*2.5, y*2.5, z*2.5))
 
+def make_avatar_center_bg():
+    anim = animDump.KeyframeMotion(priority=0, easeIn=0.0, easeOut=0.0)
+    anim.new_joint('Avatar Center', locKeysF=[[0.0, 0.0, 0.0, 0.0]], rotKeysF=[[0.0, 0.0, 0.0, 0.0]])
+    anim.serialize_filename('Avatar Center zero bg.anim')
+
 def make_tail_adjust(z, y):
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0)
     anim.new_joint('mTail1', locKeysF=[[0.0, -y-0.116, 0.0, z+0.047]])
@@ -44,3 +49,4 @@ for x in range(-2, 3):
     for y in range(-2, 3):
         for z in range(-2, 3):
             make_avatar_center_adjust(x, y, z)
+make_avatar_center_bg()
