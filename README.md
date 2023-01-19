@@ -1,5 +1,6 @@
 # tanimbomb
 Messing around with the Secondlife animation format
 
-- Another similar project in C#: [AnimMaker](https://github.com/LGGGreg/par/releases/tag/v1)
+Similar projects:
+- [AnimMaker](https://github.com/LGGGreg/par/releases/tag/v1) in C#
 - [AnimHacker](https://aiaicapta.in/anim-hacker/) has a UI
