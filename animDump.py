@@ -450,10 +450,10 @@ class MirrorJoints(AnimTransform):
         pass
 
     def __call__(self, anim: KeyframeMotion):
-        loc_scale  = np.array([1,  1, -1,  1], JointMotion.U16)
-        loc_offset = np.array([0,  0, -1,  0], JointMotion.U16)
-        rot_scale  = np.array([1, -1,  1, -1], JointMotion.U16)
-        rot_offset = np.array([0, -1,  0, -1], JointMotion.U16)
+        loc_scale  = np.array([1,  1, -1,  1]).astype(JointMotion.U16)
+        loc_offset = np.array([0,  0, -1,  0]).astype(JointMotion.U16)
+        rot_scale  = np.array([1, -1,  1, -1]).astype(JointMotion.U16)
+        rot_offset = np.array([0, -1,  0, -1]).astype(JointMotion.U16)
         for joint in anim.joints:
             assert joint.name not in self.ROTATED_JOINTS
             joint.name = self.mirror_joint_name(joint.name)
