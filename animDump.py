@@ -301,6 +301,8 @@ class KeyframeMotion(object):
         return np.unique(np.concatenate((locKeys, rotKeys)))
 
     def calculate_frame_rate(self):
+        if self.duration == 0.0:
+            return None
         diff_keys = np.diff(self.all_keyframe_times())
         if diff_keys.size == 0:
             return None
