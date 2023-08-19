@@ -321,7 +321,7 @@ class KeyframeMotion(object):
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        format = '|%d|%2d|%2d|%2d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d %2dR %2dL %2dC %3.1f-%3.1fEs %6.3fs %s (%5.2fin + %5.2f + %5.2fout)'
+        format = '|%d|%2d|%3d|%3d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d%3dR%3dL %2dC %3.1f-%3.1fEs %6.3fs %s (%5.2fin + %5.2f + %5.2fout)'
         summary = format % (
             self.priority, rotJointCount, locJointCount, len(self.constraints),
             self.easeIn, self.easeOut,
@@ -482,6 +482,17 @@ class MirrorJoints(AnimTransform):
             return name.replace("R ", "L ", 1)
         else:
             return name
+
+
+class SetJointPriority(AnimTransform):
+    def __init__(self, jointGlob, priority):
+        self.jointGlob = jointGlob
+        self.priority = int(priority)
+
+    def __call__(self, anim):
+        for joint in anim.joints:
+            if fnmatch.fnmatch(joint.name, self.jointGlob):
+                joint.priority = self.priority
 
 
 class TransformJointsMatching(AnimTransform):
@@ -686,6 +697,8 @@ if __name__ == '__main__':
                         help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
     parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
                         dest='actions', func=MirrorJoints, nargs=0)
+    parser.add_argument('--joint-pri', action=AppendObjectAction,
+                        dest='actions', func=SetJointPriority, nargs=2)
 
     parser.add_argument('--pri', action=AppendObjectAction,
             dest='actions', func=SetAnimPriority, nargs=1,
