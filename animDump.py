@@ -104,6 +104,15 @@ class JointMotion(object):
     def get_locKeysF(self, dur=1.0, round_zero=True):
         return self.keys_int_to_float(self.locKeys, self.LOC_MAX, dur=dur, round_zero=round_zero)
 
+    def loc_range_squared(self):
+        locKeysF = self.locKeysF
+        if len(locKeysF) == 0:
+            return 0
+        return np.max(np.sum(locKeysF[:, 1:] ** 2, axis=1))
+
+    def loc_range(self):
+        return np.sqrt(self.loc_range_squared())
+
     @classmethod
     def keys_int_to_float(cls, keys, scale=1.0, dur=1.0, round_zero=True):
         m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
@@ -150,8 +159,8 @@ class JointMotion(object):
         return "<%s %s>" % (self.__class__.__name__, self)
 
     def __str__(self):
-        return 'P%d %dR %dL: %s' % (
-            self.priority, len(self.rotKeys), len(self.locKeys), self.name)
+        return 'P%d %dR %dL (%dm): %s' % (
+            self.priority, len(self.rotKeys), len(self.locKeys), self.loc_range(), self.name)
 
 
 class JointConstraintSharedData(object):
@@ -315,15 +324,21 @@ class KeyframeMotion(object):
             frame_time *= np.max(diff_frames - np.floor(diff_frames))
         return None
 
+    def loc_range_squared(self):
+        return max(joint.loc_range_squared() for joint in self.joints)
+
+    def loc_range(self):
+        return np.sqrt(self.loc_range_squared())
+
     def summary(self, filename=None, markdown=False):
         rotJointCount = 0
         locJointCount = 0
         for joint in self.joints:
             if (joint.rotKeys.size): rotJointCount += 1
             if (joint.locKeys.size): locJointCount += 1
-        format = '|%d|%2d|%3d|%3d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d%3dR%3dL %2dC %3.1f-%3.1fEs %6.3fs %s (%5.2fin + %5.2f + %5.2fout)'
+        format = '|%d|%2d|%3d|%4.2f|%3d|%3.1f|%3.1f|%7.4f|%s|%5.2f|%7.4f|%5.2f|' if markdown else 'P%d%3dR%3dL (%4.2fm)%2dC %3.1f-%3.1fEs %6.3fs %s (%4.2fin + %5.2f + %5.2fout)'
         summary = format % (
-            self.priority, rotJointCount, locJointCount, len(self.constraints),
+            self.priority, rotJointCount, locJointCount, self.loc_range(), len(self.constraints),
             self.easeIn, self.easeOut,
             self.duration, "  looped" if self.loop else "unlooped",
             self.loop_start, self.loop_end - self.loop_start, self.duration - self.loop_end,
@@ -753,8 +768,8 @@ if __name__ == '__main__':
     _ensure_value(args, 'actions', [])
 
     if args.markdown:
-        print('|Filename|Pri|Rots|Locs|Cons|E In|E Out|Dur|Loop|L In|L Dur|L Out|FPS|Frames|')
-        print('|--------|--:|---:|---:|---:|---:|----:|--:|---:|---:|----:|----:|--:|-----:|')
+        print('|Filename|Pri|Rots|Locs|Range|Cons|E In|E Out|Dur|Loop|L In|L Dur|L Out|FPS|Frames|')
+        print('|--------|--:|---:|---:|----:|---:|---:|----:|--:|---:|---:|----:|----:|--:|-----:|')
     max_file_len = max(len(output_filename(file)) for file in args.files)
     format = f"%-{max_file_len}s"
     for filename in args.files:
