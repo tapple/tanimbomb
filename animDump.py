@@ -445,6 +445,15 @@ class OffsetJoint(AnimTransform):
         joint._locKeys += self.offset
 
 
+class ScaleLocKeys(AnimTransform):
+    def __init__(self, factor):
+        self.factor = np.array([1, factor, factor, factor])
+
+    def __call__(self, anim):
+        for joint in anim.joints:
+            joint.locKeysF *= self.factor
+
+
 class MirrorJoints(AnimTransform):
     ROTATED_JOINTS = {
         "CHEST": [0, -10, 0],
@@ -703,8 +712,9 @@ if __name__ == '__main__':
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
     parser.add_argument('--outputfile-pattern', '-o')
 
-    parser.add_argument('--scale', '--speed', '-s', action=AppendObjectAction,
-            dest='actions', func=SpeedAnimation, nargs=1, type=float)
+    parser.add_argument('--time-scale', '--tscale', '--speed', '-s', action=AppendObjectAction,
+            dest='actions', func=SpeedAnimation, nargs=1, type=float,
+    help = "Adjust duration by the given factor eg 2.0 for half-speed/double duration, or 0.5 for double speed/half duration")
     parser.add_argument('--frame-rate', '--fps', action=AppendObjectAction,
                         dest='actions', func=SetFrameRate, nargs=1, type=int)
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
@@ -712,6 +722,9 @@ if __name__ == '__main__':
                         help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
     parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
                         dest='actions', func=MirrorJoints, nargs=0)
+    parser.add_argument('--scale', action=AppendObjectAction,
+                        dest='actions', func=ScaleLocKeys, nargs=1, type=float,
+                        help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
     parser.add_argument('--joint-pri', action=AppendObjectAction,
                         dest='actions', func=SetJointPriority, nargs=2)
 
