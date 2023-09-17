@@ -159,7 +159,7 @@ class JointMotion(object):
         return "<%s %s>" % (self.__class__.__name__, self)
 
     def __str__(self):
-        return 'P%d %dR %dL (%dm): %s' % (
+        return 'P%d %dR %dL (%.2fm): %s' % (
             self.priority, len(self.rotKeys), len(self.locKeys), self.loc_range(), self.name)
 
 
