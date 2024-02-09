@@ -696,8 +696,16 @@ class AppendObjectAction(argparse.Action):
 def output_filename(input_filename):
     if args.outputfile_pattern is None:
         return input_filename
+
     input_path = Path(input_filename)
-    return f"{args.outputfile_pattern}{{suffix}}".format(input_path.stem, suffix=input_path.suffix)
+    output_path = Path(args.outputfile_pattern
+                       .replace("%N", input_path.stem)
+                       .replace("%P", str(input_path.parent.resolve()))
+                       .replace("%%", "%"),
+                       parents=input_path.parents,
+                       suffix=input_path.suffix)
+
+    return str(output_path)
 
 
 if __name__ == '__main__':
@@ -710,7 +718,11 @@ if __name__ == '__main__':
     parser.add_argument('--no-sort', '-U', action='store_false', dest='sort',
                         help="when printing joints with -v, show in file order rather than abc order")
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
-    parser.add_argument('--outputfile-pattern', '-o')
+    parser.add_argument('--outputfile-pattern', '-o', help="""Output name with optional pattern matching:
+                                                           '%%N' = input file name,
+                                                           '%%P' = input file directory,
+                                                           '%%%%' = literal '%%'.
+                                                           File extensions will be appended automatically""")
 
     parser.add_argument('--time-scale', '--tscale', '--speed', '-s', action=AppendObjectAction,
             dest='actions', func=SpeedAnimation, nargs=1, type=float,
