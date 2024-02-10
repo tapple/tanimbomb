@@ -699,11 +699,9 @@ def output_filename(input_filename):
 
     input_path = Path(input_filename)
     output_path = Path(args.outputfile_pattern
-                       .replace("%N", input_path.stem)
-                       .replace("%P", str(input_path.parent.resolve()))
-                       .replace("%%", "%"),
-                       parents=input_path.parents,
-                       suffix=input_path.suffix)
+                       .replace("%n", input_path.stem)
+                       .replace("%p", str(input_path.parent.resolve()))
+                       .replace("%%", "%")).with_suffix(input_path.suffix)
 
     return str(output_path)
 
@@ -712,18 +710,22 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files',
-            fromfile_prefix_chars='@')
+            fromfile_prefix_chars='@', formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
+output file pattern flags:
+  %n: input file name
+  %p: input file directory
+  %%: literal '%'
+  file extensions will be appended automatically
+                   """)
+
     parser.add_argument('files', nargs='+', help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
     parser.add_argument('--no-sort', '-U', action='store_false', dest='sort',
                         help="when printing joints with -v, show in file order rather than abc order")
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
-    parser.add_argument('--outputfile-pattern', '-o', help="""Output name with optional pattern matching:
-                                                           '%%N' = input file name,
-                                                           '%%P' = input file directory,
-                                                           '%%%%' = literal '%%'.
-                                                           File extensions will be appended automatically""")
-
+    parser.add_argument('--outputfile-pattern', '-o',
+                        help='Output anim file path/name, see \'output file pattern flags\' below for details')
     parser.add_argument('--time-scale', '--tscale', '--speed', '-s', action=AppendObjectAction,
             dest='actions', func=SpeedAnimation, nargs=1, type=float,
     help = "Adjust duration by the given factor eg 2.0 for half-speed/double duration, or 0.5 for double speed/half duration")
