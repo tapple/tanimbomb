@@ -732,7 +732,11 @@ File extension will be appended automatically""")
                         dest='actions', func=SetFrameRate, nargs=1, type=int)
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
                         dest='actions', func=OffsetJoint, nargs='+',
-                        help="Adjust joint location [joint] [x y] z. joint is mPelvis if omitted. x, y are 0 if omitted")
+    help="""Adjust joint location on all keyframes. Takes 1-4 arguments [joint] [x y] z. Examples:
+    "--offset 0.5": move mPelvis up 0.5
+    "--offset mTail1 -0.2": move mTail1 down 0.2m
+    "--offset 0.3 0.4 -0.5": move mPelvis forward 0.3m, left 0.4m, down 0.5m
+    "--offset L_CLAVICLE 0.3 0.4 -0.5": move L_CLAVICLE forward 0.3m, left 0.4m, down 0.5m""")
     parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
                         dest='actions', func=MirrorJoints, nargs=0)
     parser.add_argument('--scale', action=AppendObjectAction,
