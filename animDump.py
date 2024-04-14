@@ -508,6 +508,17 @@ class MirrorJoints(AnimTransform):
             return name
 
 
+class FreezeJoints(AnimTransform):
+    def __init__(self, *args):
+        pass
+
+    def __call__(self, anim):
+        for joint in anim.joints:
+            joint.locKeys = joint.locKeys[:1]
+            joint.rotKeys = joint.rotKeys[:1]
+
+
+
 class SetJointPriority(AnimTransform):
     def __init__(self, jointGlob, priority):
         self.jointGlob = jointGlob
@@ -742,6 +753,9 @@ File extension will be appended automatically""")
     parser.add_argument('--scale', action=AppendObjectAction,
                         dest='actions', func=ScaleLocKeys, nargs=1, type=float,
                         help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
+    parser.add_argument('--freeze', action=AppendObjectAction,
+                        dest='actions', func=FreezeJoints, nargs=0,
+                        help="Turn an animation into a static pose by removing all keyframes except the pose at time zero")
     parser.add_argument('--joint-pri', action=AppendObjectAction,
                         dest='actions', func=SetJointPriority, nargs=2)
 
