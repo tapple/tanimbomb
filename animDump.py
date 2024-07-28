@@ -108,7 +108,7 @@ class JointMotion(object):
         locKeysF = self.locKeysF
         if len(locKeysF) == 0:
             return 0
-        return np.max(np.sum(locKeysF[:, 1:] ** 2, axis=1))
+        return np.max(np.sum((locKeysF[:, 1:] - locKeysF[0, 1:]) ** 2, axis=1))
 
     def loc_range(self):
         return np.sqrt(self.loc_range_squared())
