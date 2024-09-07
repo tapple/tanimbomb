@@ -22,14 +22,15 @@ bl_info = {
     "name": "SecondLife Animation (ANIM) format",
     "author": "Tapple Gao",
     "version": (2021, 4, 13),
-    "blender": (2, 74, 0),
+    "blender": (2, 80, 0), # should be "blender": (2, 74, 0), but there's a special case for <2.80
     "location": "File > Import-Export",
     "description": "Import SecondLife anim files to Avastar rigs",
     "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
                 "Scripts/Import-Export/BVH_Importer_Exporter",
     "support": 'COMMUNITY',
-    "category": "Import-Export"}
+    "category": "Import-Export",
+}
 
 import struct
 import math
@@ -185,10 +186,10 @@ class JointMotion(object):
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
             # print("data_path = %s" % data_path)
-            fw = action.fcurves.new(data_path, 0, self.name)
-            fx = action.fcurves.new(data_path, 1, self.name)
-            fy = action.fcurves.new(data_path, 2, self.name)
-            fz = action.fcurves.new(data_path, 3, self.name)
+            fw = action.fcurves.new(data_path, index=0, action_group=self.name)
+            fx = action.fcurves.new(data_path, index=1, action_group=self.name)
+            fy = action.fcurves.new(data_path, index=2, action_group=self.name)
+            fz = action.fcurves.new(data_path, index=3, action_group=self.name)
             qp = Quaternion((0, 0, 0, 0))
             negate = False
             for t, x, y, z in self.get_rotKeysF(dur):
@@ -212,9 +213,9 @@ class JointMotion(object):
         if self.locKeys.size:
             data_path = 'pose.bones["%s"].location' % self.name
             # print("data_path = %s" % data_path)
-            fx = action.fcurves.new(data_path, 0, self.name)
-            fy = action.fcurves.new(data_path, 1, self.name)
-            fz = action.fcurves.new(data_path, 2, self.name)
+            fx = action.fcurves.new(data_path, index=0, action_group=self.name)
+            fy = action.fcurves.new(data_path, index=1, action_group=self.name)
+            fz = action.fcurves.new(data_path, index=2, action_group=self.name)
             for t, x, y, z in self.get_locKeysF(dur):
                 # print("%ft %fx %fy %fz" % (t, x, y, z))
                 v = Vector((y, -x, z))
@@ -223,7 +224,7 @@ class JointMotion(object):
                 fy.keyframe_points.insert(t, v.y)
                 fz.keyframe_points.insert(t, v.z)
         data_path = 'pose.bones["%s"]["priority"]' % self.name
-        f = action.fcurves.new(data_path, 0, self.name)
+        f = action.fcurves.new(data_path, index=0, action_group=self.name)
         f.keyframe_points.insert(0, self.priority)
 
     def __repr__(self):
@@ -351,17 +352,26 @@ class KeyframeMotion(object):
         action = bpy.data.actions.new(name=name)
         armature.animation_data.action = action
 
-        action.AnimProps.Priority = self.priority
-        action.AnimProps.frame_start = 0
-        action.AnimProps.frame_end = self.duration * self.frameRate + 0.5
-        # action.AnimProps.??? = self.emote
-        action.AnimProps.Loop = self.loop
-        action.AnimProps.Loop_In = self.loopIn * self.frameRate + 0.5
-        action.AnimProps.Loop_Out = self.loopOut * self.frameRate + 0.5
-        action.AnimProps.Ease_In = self.easeIn
-        action.AnimProps.Ease_Out = self.easeOut
-        action.AnimProps.Hand_Posture = str(self.handPosture)
-        action.AnimProps.fps = self.frameRate
+        try:
+            anim_props = action.AnimProps  # avastar 2.*
+        except AttributeError:
+            try:
+                anim_props = action.AnimProp  # avastar 3.*
+            except AttributeError:  # avastar not installed
+                anim_props = None
+        if anim_props is not None:
+            anim_props.Priority = self.priority
+            anim_props.frame_start = 0
+            anim_props.frame_end = int(self.duration * self.frameRate + 0.5)
+            # action.AnimProps.??? = self.emote
+            anim_props.Loop = self.loop
+            anim_props.Loop_In = int(self.loopIn * self.frameRate + 0.5)
+            anim_props.Loop_Out = int(self.loopOut * self.frameRate + 0.5)
+            anim_props.Ease_In = self.easeIn
+            anim_props.Ease_Out = self.easeOut
+            anim_props.Hand_Posture = str(self.handPosture)
+            anim_props.fps = self.frameRate
+
         for joint in self.joints:
             joint.create_fcurves(action, self.duration * self.frameRate, armature)
         for cu in action.fcurves:
@@ -424,8 +434,9 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
     bl_options = {'REGISTER', 'UNDO'}
 
     filename_ext = ".anim"
-    filter_glob = StringProperty(default="*.anim", options={'HIDDEN'})
-    files = CollectionProperty(type=bpy.types.PropertyGroup)
+    filter_glob: StringProperty(default="*.anim", options={'HIDDEN', 'SKIP_SAVE'})
+    # directory = bpy.props.StringProperty(maxlen=1024, subtype='FILE_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+    files: CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
 
     def execute(self, context):
         folder = os.path.dirname(self.filepath)
@@ -435,20 +446,29 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
         return {'FINISHED'}
 
 
-# Only needed if you want to add into a dynamic menu
 def menu_func_import(self, context):
     self.layout.operator(ImportANIM.bl_idname, text="SL Animation (.anim)")
 
-
 def register():
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_file_import.append(menu_func_import)
+    print(f"{__name__}.register()")
+    print("hello")
+    # bpy.utils.register_module(__name__)
+    # bpy.utils.register_module(__name__)
+    bpy.utils.register_class(ImportANIM)
+    try:
+        bpy.types.INFO_MT_file_import.append(menu_func_import)  # bpy 2.79
+    except AttributeError:
+        bpy.types.TOPBAR_MT_file_import.append(menu_func_import)  # bpy 3.3
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
-    bpy.types.INFO_MT_file_import.remove(menu_func_import)
-
+    print(f"{__name__}.unregister()")
+    # bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_class(ImportANIM)
+    try:
+        bpy.types.INFO_MT_file_import.remove(menu_func_import)  # bpy 2.79
+    except AttributeError:
+        bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)  # bpy 3.3
 
 if __name__ == "__main__":
 #    register()
