@@ -6,6 +6,7 @@ import struct
 import copy
 import sys
 from pathlib import Path
+import textwrap
 import numpy as np
 
 
@@ -162,6 +163,17 @@ class JointMotion(object):
         return 'P%d %dR %dL (%.2fm): %s' % (
             self.priority, len(self.rotKeys), len(self.locKeys), self.loc_range(), self.name)
 
+    def dump(self, dur=1.0, verbosity=0):
+        print('  %s' % self)
+        if verbosity == 1:
+            print('    R:%s' % self.dump_keys_hex(self.rotKeys))
+            print('    L:%s' % self.dump_keys_hex(self.locKeys))
+
+    @staticmethod
+    def dump_keys_hex(keys):
+        split = " ".join(textwrap.wrap(keys.tobytes().hex(), 16))
+        return textwrap.indent(textwrap.fill(split, 170), "      ").strip()
+
 
 class JointConstraintSharedData(object):
     def deserialize(self, stream):
@@ -183,7 +195,7 @@ class JointConstraintSharedData(object):
             self.easeInStart, self.easeInStop, self.easeOutStart, self.easeOutStop)
 
     def dump(self):
-        return "\tchain: %d type: %d\n\t\t%s + %s ->\n\t\t%s + %s at %s\n\t\tease: %f, %f - %f, %f" % (
+        return "  chain: %d type: %d\n    %s + %s ->\n    %s + %s at %s\n    ease: %f, %f - %f, %f" % (
             self.chainLength, self.type,
             self.sourceVolume, self.sourceOffset,
             self.targetVolume, self.targetOffset,
@@ -281,7 +293,7 @@ class KeyframeMotion(object):
         with open(filename, 'wb') as f:
             self.serialize(f)
 
-    def dump(self, keys=False, sort=True):
+    def dump(self, verbosity=0, sort=True):
         print("version: %d.%d" % (self.version, self.subVersion))
         print("priority: %d" % (self.priority,))
         print("duration: %f" % (self.duration,))
@@ -293,10 +305,7 @@ class KeyframeMotion(object):
         if sort:
             joints = sorted(joints, key=lambda joint: joint.name)
         for joint in joints:
-            print('\t%s' % joint)
-            if keys:
-                print('\t\tR:%s' % joint.rotKeys.tobytes().hex())
-                print('\t\tL:%s' % joint.locKeys.tobytes().hex())
+            joint.dump(self.duration, verbosity)
 
         print('constraints: %d' % (len(self.constraints),))
         for constraint in self.constraints:
