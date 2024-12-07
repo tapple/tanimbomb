@@ -182,9 +182,9 @@ class JointMotion(object):
     @staticmethod
     def dump_keys_decimal(keys):
         """ 5 keyframes per line, decimal """
-        split = " ".join(textwrap.wrap(keys.tobytes().hex(), 16))
-        split = " ".join(textwrap.wrap(keys.tobytes().hex(), 16))
-        return textwrap.indent(textwrap.fill(split, 170), "      ").strip()
+        frames = ["%7.4ft% .5fx% .5fy% .5fz" % tuple(frame) for frame in keys]
+        lines = ["  ".join(line) for line in batched(frames, 4)]
+        return "\n      ".join(lines)
 
 
 class JointConstraintSharedData(object):
