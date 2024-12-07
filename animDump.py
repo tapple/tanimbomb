@@ -484,9 +484,9 @@ class AppendAnim(AnimTransform):
         dur_1 = max(anim_1.duration, self.DUR_MIN)
         dur_2 = max(anim_2.duration, self.DUR_MIN)
         new_dur = dur_1 + dur_2
-        scale_1  = np.array([JointMotion.U16MAX*dur_1/new_dur, 1, 1, 1]).astype(JointMotion.U16)
-        scale_2  = np.array([JointMotion.U16MAX*dur_2/new_dur, 1, 1, 1]).astype(JointMotion.U16)
-        offset_2 = np.array([JointMotion.U16MAX*dur_1/new_dur, 0, 0, 0]).astype(JointMotion.U16)
+        scale_1  = np.array([dur_1/new_dur, 1, 1, 1]).astype(JointMotion.U16)
+        scale_2  = np.array([dur_2/new_dur, 1, 1, 1]).astype(JointMotion.U16)
+        offset_2 = np.array([dur_1/new_dur, 0, 0, 0]).astype(JointMotion.U16)*JointMotion.U16MAX
 
         for joint in self.extra_anim.joints:
             anim.ensure_joint(joint.name)
@@ -504,8 +504,10 @@ class AppendAnim(AnimTransform):
 
         if self.prepend:
             anim.loop_start += dur_1
+            anim.loop_end   += dur_1
+            anim.easeIn = anim_1.easeIn
         else:
-            anim.loop_end -= dur_2
+            anim.easeOut = anim_2.easeOut
         anim.duration = new_dur
 
 
@@ -809,10 +811,10 @@ File extension will be appended automatically""")
                         dest='actions', func=ScaleLocKeys, nargs=1, type=float,
                         help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
     parser.add_argument('--append', action=AppendObjectAction,
-                        dest='actions', func=AppendAnim, nargs=1, nargs=1, prepend=False,
+                        dest='actions', func=AppendAnim, nargs=1, prepend=False,
                         help="Add keyframes another anim file to the end of the ease out")
     parser.add_argument('--prepend', action=AppendObjectAction,
-                        dest='actions', func=AppendAnim, nargs=1, nargs=1, prepend=True,
+                        dest='actions', func=AppendAnim, nargs=1, prepend=True,
                         help="Add keyframes another anim file to the beginning of the ease in")
     parser.add_argument('--freeze', action=AppendObjectAction,
                         dest='actions', func=FreezeJoints, nargs=0,
@@ -884,6 +886,6 @@ File extension will be appended automatically""")
             action(anim)
         anim.summarize(format % output_filename(filename), markdown=args.markdown)
         if args.verbose > 0:
-            anim.dump(keys=args.verbose > 1, sort=args.sort)
+            anim.dump(verbosity=args.verbose-1, sort=args.sort)
         if args.outputfile_pattern:
             anim.serialize_filename(output_filename(filename))
