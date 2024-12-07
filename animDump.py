@@ -291,7 +291,7 @@ class KeyframeMotion(object):
         print('joints: %d' % (len(self.joints),))
         joints = self.joints
         if sort:
-            joints.sort(key=lambda joint: joint.name)
+            joints = sorted(joints, key=lambda joint: joint.name)
         for joint in joints:
             print('\t%s' % joint)
             if keys:
@@ -357,11 +357,27 @@ class KeyframeMotion(object):
         print(self.summary(filename, markdown))
 
     def new_joint(self, name, priority=None, **kwargs):
-        joint = JointMotion(name, self.priority if priority is None else priority, **kwargs)
-        self.joints.append(joint)
-        return joint
+        """ create a new joint with priority derived from this animation """
+        return JointMotion(name, self.priority if priority is None else priority, **kwargs)
+
+    def get_joint(self, name, priority=None, **kwargs):
+        """ Return the joint named "item", or a blank one if missing """
+        try:
+            return self[name]
+        except KeyError:
+            return self.new_joint(name, priority, **kwargs)
+
+    def ensure_joint(self, name, priority=None, **kwargs):
+        """ Return the joint named "item", or add a blank one if missing """
+        try:
+            return self[name]
+        except KeyError:
+            joint = self.new_joint(name, priority, **kwargs)
+            self.joints.append(joint)
+            return joint
 
     def __getitem__(self, item):
+        """ Return the joint named "item", or KeyError if missing """
         for joint in self.joints:
             if joint.name == item:
                 return joint
@@ -438,10 +454,7 @@ class OffsetJoint(AnimTransform):
         self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
 
     def __call__(self, anim):
-        try:
-            joint = anim[self.joint]
-        except KeyError:
-            joint = anim.new_joint(self.joint, locKeys=np.zeros[JointMotion.KEY_SIZE])
+        joint = anim.ensure_joint(self.joint, locKeys=np.zeros[JointMotion.KEY_SIZE])
         joint._locKeys += self.offset
 
 
@@ -452,6 +465,48 @@ class ScaleLocKeys(AnimTransform):
     def __call__(self, anim):
         for joint in anim.joints:
             joint.locKeysF *= self.factor
+
+
+class AppendAnim(AnimTransform):
+    DUR_MIN = 0.01
+
+    def __init__(self, extra_anim_filename, prepend=False):
+        self.extra_anim = KeyframeMotion()
+        self.extra_anim.deserialize_filename(extra_anim_filename)
+        self.prepend = prepend
+
+    def __call__(self, anim: KeyframeMotion):
+        if self.prepend:
+            anim_1, anim_2 = self.extra_anim, anim
+        else:
+            anim_1, anim_2 = anim, self.extra_anim
+
+        dur_1 = max(anim_1.duration, self.DUR_MIN)
+        dur_2 = max(anim_2.duration, self.DUR_MIN)
+        new_dur = dur_1 + dur_2
+        scale_1  = np.array([JointMotion.U16MAX*dur_1/new_dur, 1, 1, 1]).astype(JointMotion.U16)
+        scale_2  = np.array([JointMotion.U16MAX*dur_2/new_dur, 1, 1, 1]).astype(JointMotion.U16)
+        offset_2 = np.array([JointMotion.U16MAX*dur_1/new_dur, 0, 0, 0]).astype(JointMotion.U16)
+
+        for joint in self.extra_anim.joints:
+            anim.ensure_joint(joint.name)
+        for joint in anim.joints:
+            joint_1 = anim_1.get_joint(joint.name)
+            joint_2 = anim_2.get_joint(joint.name)
+            joint.rotKeys = np.concatenate([
+                joint_1.rotKeys * scale_1,
+                joint_2.rotKeys * scale_2 + offset_2,
+            ])
+            joint.locKeys = np.concatenate([
+                joint_1.locKeys * scale_1,
+                joint_2.locKeys * scale_2 + offset_2,
+            ])
+
+        if self.prepend:
+            anim.loop_start += dur_1
+        else:
+            anim.loop_end -= dur_2
+        anim.duration = new_dur
 
 
 class MirrorJoints(AnimTransform):
@@ -753,6 +808,12 @@ File extension will be appended automatically""")
     parser.add_argument('--scale', action=AppendObjectAction,
                         dest='actions', func=ScaleLocKeys, nargs=1, type=float,
                         help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
+    parser.add_argument('--append', action=AppendObjectAction,
+                        dest='actions', func=AppendAnim, nargs=1, nargs=1, prepend=False,
+                        help="Add keyframes another anim file to the end of the ease out")
+    parser.add_argument('--prepend', action=AppendObjectAction,
+                        dest='actions', func=AppendAnim, nargs=1, nargs=1, prepend=True,
+                        help="Add keyframes another anim file to the beginning of the ease in")
     parser.add_argument('--freeze', action=AppendObjectAction,
                         dest='actions', func=FreezeJoints, nargs=0,
                         help="Turn an animation into a static pose by removing all keyframes except the pose at time zero")
