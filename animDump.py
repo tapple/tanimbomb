@@ -6,7 +6,7 @@ import struct
 import copy
 import sys
 from pathlib import Path
-import textwrap
+from itertools import batched
 import numpy as np
 
 
@@ -168,9 +168,21 @@ class JointMotion(object):
         if verbosity == 1:
             print('    R:%s' % self.dump_keys_hex(self.rotKeys))
             print('    L:%s' % self.dump_keys_hex(self.locKeys))
+        elif verbosity >= 2:
+            print('    R:%s' % self.dump_keys_decimal(self.get_rotKeysF(dur=dur)))
+            print('    L:%s' % self.dump_keys_decimal(self.get_locKeysF(dur=dur)))
 
     @staticmethod
     def dump_keys_hex(keys):
+        """ 10 keyframes per line, hex """
+        frames = ["".join(frame) for frame in batched(keys.tobytes().hex(), 16)]
+        lines = [" ".join(line) for line in batched(frames, 10)]
+        return "\n      ".join(lines)
+
+    @staticmethod
+    def dump_keys_decimal(keys):
+        """ 5 keyframes per line, decimal """
+        split = " ".join(textwrap.wrap(keys.tobytes().hex(), 16))
         split = " ".join(textwrap.wrap(keys.tobytes().hex(), 16))
         return textwrap.indent(textwrap.fill(split, 170), "      ").strip()
 
