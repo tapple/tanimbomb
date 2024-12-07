@@ -782,20 +782,18 @@ class AppendObjectAction(argparse.Action):
         setattr(namespace, self.dest, items)
 
 
-def output_filename(input_filename):
-    if args.outputfile_pattern is None:
-        return input_filename
+def main():
+    def output_filename(input_filename):
+        if args.outputfile_pattern is None:
+            return input_filename
 
-    input_path = Path(input_filename)
-    output_path = Path(args.outputfile_pattern
-                       .replace("%n", input_path.stem)
-                       .replace("%p", str(input_path.parent.resolve()))
-                       .replace("%%", "%")).with_suffix(input_path.suffix)
+        input_path = Path(input_filename)
+        output_path = Path(args.outputfile_pattern
+                           .replace("%n", input_path.stem)
+                           .replace("%p", str(input_path.parent.resolve()))
+                           .replace("%%", "%")).with_suffix(input_path.suffix)
 
-    return str(output_path)
-
-
-if __name__ == '__main__':
+        return str(output_path)
 
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files',
@@ -910,3 +908,6 @@ File extension will be appended automatically""")
             anim.dump(verbosity=args.verbose-1, sort=args.sort)
         if args.outputfile_pattern:
             anim.serialize_filename(output_filename(filename))
+
+if __name__ == '__main__':
+    main()

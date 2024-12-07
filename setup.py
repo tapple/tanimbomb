@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup
 setup(name='tanimbomb',
-    scripts=['animDump.py'],
-    packages=[],
+    entry_points={'console_scripts': ['animDump = animDump:main']},
+    py_modules=["animDump"],
     install_requires=['numpy'],
 )
