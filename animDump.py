@@ -505,22 +505,22 @@ class AppendAnim(AnimTransform):
         dur_1 = max(anim_1.duration, self.DUR_MIN)
         dur_2 = max(anim_2.duration, self.DUR_MIN)
         new_dur = dur_1 + dur_2
-        scale_1  = np.array([dur_1/new_dur, 1, 1, 1]).astype(JointMotion.U16)
-        scale_2  = np.array([dur_2/new_dur, 1, 1, 1]).astype(JointMotion.U16)
-        offset_2 = np.array([dur_1/new_dur, 0, 0, 0]).astype(JointMotion.U16)*JointMotion.U16MAX
+        scale_1  = np.array([dur_1/new_dur, 1, 1, 1])
+        scale_2  = np.array([dur_2/new_dur, 1, 1, 1])
+        offset_2 = np.array([dur_1/new_dur, 0, 0, 0])
 
         for joint in self.extra_anim.joints:
             anim.ensure_joint(joint.name)
         for joint in anim.joints:
             joint_1 = anim_1.get_joint(joint.name)
             joint_2 = anim_2.get_joint(joint.name)
-            joint.rotKeys = np.concatenate([
-                joint_1.rotKeys * scale_1,
-                joint_2.rotKeys * scale_2 + offset_2,
-            ])
-            joint.locKeys = np.concatenate([
-                joint_1.locKeys * scale_1,
-                joint_2.locKeys * scale_2 + offset_2,
+            joint.rotKeysF = np.concatenate([
+                joint_1.rotKeysF * scale_1,
+                joint_2.rotKeysF * scale_2 + offset_2,
+            ], )
+            joint.locKeysF = np.concatenate([
+                joint_1.locKeysF * scale_1,
+                joint_2.locKeysF * scale_2 + offset_2,
             ])
 
         if self.prepend:
