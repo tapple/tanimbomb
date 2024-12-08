@@ -77,7 +77,7 @@ def make_loc_anim(joint_name, axis, dur=2.0, amplitude=2.0, frames=12):
         keys[i][0] = t
         keys[i][axis+1] = x
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0, duration=dur)
-    anim.new_joint(joint_name, locKeysF=keys)
+    anim.ensure_joint(joint_name, locKeysF=keys)
     axis_name = ['x', 'y', 'z'][axis]
     anim.serialize_filename('%s_loc_%s.anim' % (joint_name, axis_name))
 
@@ -94,7 +94,7 @@ def make_rot_anim(joint_name, axis, dur=2.0, frames=12):
         keys[i][0] = t
         keys[i][axis+1] = x
     anim = animDump.KeyframeMotion(priority=6, easeIn=0.0, easeOut=0.0, duration=dur)
-    anim.new_joint(joint_name, rotKeysF=keys)
+    anim.ensure_joint(joint_name, rotKeysF=keys)
     axis_name = ['x', 'y', 'z'][axis]
     anim.serialize_filename('%s_rot_%s.anim' % (joint_name, axis_name))
 
