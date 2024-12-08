@@ -6,7 +6,8 @@ import struct
 import copy
 import sys
 from pathlib import Path
-from itertools import batched
+from textwrap import wrap
+import shutil
 import numpy as np
 
 
@@ -46,6 +47,40 @@ class BinaryStream:
     def writeCString(self, string):
         self.writeBytes(string)
         self.writeBytes(b"\0")
+
+
+def col_print(lines, term_width=None, indent=0, pad=2):
+    """Print list of strings in multiple columns
+    Original: https://gist.github.com/critiqjo/2ca84db26daaeb1715e1
+    Adjusted: https://gist.github.com/Nachtalb/8a85c0793b4bea0a102b7414be5888d4
+    """
+    if not term_width:
+        size = shutil.get_terminal_size((80, 20))
+        term_width = size.columns
+
+    n_lines = len(lines)
+    if n_lines == 0:
+        return ""
+
+    col_width = max(len(line) for line in lines)
+    n_cols = int((term_width + pad - indent) / (col_width + pad))
+    n_cols = min(n_lines, max(1, n_cols))
+
+    col_len = int(n_lines / n_cols) + (0 if n_lines % n_cols == 0 else 1)
+    if (n_cols - 1) * col_len >= n_lines:
+        n_cols -= 1
+
+    cols = [lines[i * col_len: i * col_len + col_len] for i in range(n_cols)]
+
+    rows = list(zip(*cols))
+    rows_missed = zip(*[col[len(rows):] for col in cols[:-1]])
+    rows.extend(rows_missed)
+
+    return ("\n" + " " * indent).join(
+        (" " * pad).join(
+            line.ljust(col_width)
+        for line in row)
+    for row in rows)
 
 
 class JointMotion(object):
@@ -166,25 +201,19 @@ class JointMotion(object):
     def dump(self, dur=1.0, verbosity=0):
         print('  %s' % self)
         if verbosity == 1:
-            print('    R:%s' % self.dump_keys_hex(self.rotKeys))
-            print('    L:%s' % self.dump_keys_hex(self.locKeys))
+            print('    R:%s' % col_print(self.dump_keys_hex(self.rotKeys), indent=6, pad=1))
+            print('    L:%s' % col_print(self.dump_keys_hex(self.locKeys), indent=6, pad=1))
         elif verbosity >= 2:
-            print('    R:%s' % self.dump_keys_decimal(self.get_rotKeysF(dur=dur)))
-            print('    L:%s' % self.dump_keys_decimal(self.get_locKeysF(dur=dur)))
+            print('    R:%s' % col_print(self.dump_keys_decimal(self.get_rotKeysF(dur=dur)), indent=6))
+            print('    L:%s' % col_print(self.dump_keys_decimal(self.get_locKeysF(dur=dur)), indent=6))
 
     @staticmethod
     def dump_keys_hex(keys):
-        """ 10 keyframes per line, hex """
-        frames = ["".join(frame) for frame in batched(keys.tobytes().hex(), 16)]
-        lines = [" ".join(line) for line in batched(frames, 10)]
-        return "\n      ".join(lines)
+        return wrap(keys.tobytes().hex(), 16)
 
     @staticmethod
     def dump_keys_decimal(keys):
-        """ 5 keyframes per line, decimal """
-        frames = ["%7.4ft% .5fx% .5fy% .5fz" % tuple(frame) for frame in keys]
-        lines = ["  ".join(line) for line in batched(frames, 4)]
-        return "\n      ".join(lines)
+        return ["%7.4ft% .5fx% .5fy% .5fz" % tuple(frame) for frame in keys]
 
 
 class JointConstraintSharedData(object):
