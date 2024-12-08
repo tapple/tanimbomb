@@ -346,7 +346,7 @@ class KeyframeMotion(object):
         return None
 
     def loc_range_squared(self):
-        return max(joint.loc_range_squared() for joint in self.joints)
+        return max((joint.loc_range_squared() for joint in self.joints), default=0)
 
     def loc_range(self):
         return np.sqrt(self.loc_range_squared())
