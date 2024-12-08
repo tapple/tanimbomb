@@ -661,6 +661,11 @@ class DropEmptyJoints(AnimTransform):
                 (joint.rotKeys.size or joint.locKeys.size)]
 
 
+class SortJoints(AnimTransform):
+    def __call__(self, anim):
+        anim.joints.sort(key=lambda joint: joint.name)
+
+
 class AddConstraint(AnimTransform):
     def __init__(self, sourceVolume, targetVolume, chainLength):
         self.constraint = JointConstraintSharedData()
@@ -801,7 +806,7 @@ def main():
 
     parser.add_argument('files', nargs='+', help='anim files to dump or process')
     parser.add_argument('--verbose', '-v', action='count', default=0)
-    parser.add_argument('--no-sort', '-U', action='store_false', dest='sort',
+    parser.add_argument('--unordered', '-U', action='store_false', dest='ordered',
                         help="when printing joints with -v, show in file order rather than abc order")
     parser.add_argument('--markdown', '--md', action='store_true', help="output in markdown table")
     parser.add_argument('--outputfile-pattern', '-o',
@@ -838,6 +843,9 @@ File extension will be appended automatically""")
     parser.add_argument('--freeze', action=AppendObjectAction,
                         dest='actions', func=FreezeJoints, nargs=0,
                         help="Turn an animation into a static pose by removing all keyframes except the pose at time zero")
+    parser.add_argument('--sort', action=AppendObjectAction,
+                        dest='actions', func=SortJoints,
+                        help="Sort the joints by name in the output files")
     parser.add_argument('--joint-pri', action=AppendObjectAction,
                         dest='actions', func=SetJointPriority, nargs=2)
 
@@ -905,7 +913,7 @@ File extension will be appended automatically""")
             action(anim)
         anim.summarize(format % output_filename(filename), markdown=args.markdown)
         if args.verbose > 0:
-            anim.dump(verbosity=args.verbose-1, sort=args.sort)
+            anim.dump(verbosity=args.verbose-1, sort=args.ordered)
         if args.outputfile_pattern:
             anim.serialize_filename(output_filename(filename))
 
