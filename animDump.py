@@ -555,9 +555,9 @@ class AppendAnim(AnimTransform):
         if self.prepend:
             anim.loop_start += dur_1
             anim.loop_end   += dur_1
-            anim.easeIn = anim_1.easeIn
-        else:
-            anim.easeOut = anim_2.easeOut
+        #     anim.easeIn = anim_1.easeIn
+        # else:
+        #     anim.easeOut = anim_2.easeOut
         anim.duration = new_dur
 
 
