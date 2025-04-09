@@ -504,7 +504,7 @@ class OffsetJoint(AnimTransform):
         self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
 
     def __call__(self, anim):
-        joint = anim.ensure_joint(self.joint, locKeys=np.zeros[JointMotion.KEY_SIZE])
+        joint = anim.ensure_joint(self.joint, locKeys=np.zeros(JointMotion.KEY_SIZE))
         joint._locKeys += self.offset
 
 
