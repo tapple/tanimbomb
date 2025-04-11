@@ -410,7 +410,14 @@ class KeyframeMotion(object):
         """ create a new joint with priority derived from this animation """
         return JointMotion(name, self.priority if priority is None else priority, **kwargs)
 
-    def get_joint(self, name, priority=None, **kwargs):
+    def get_joint_or_none(self, name):
+        """ Return the joint named "item", or None if missing """
+        try:
+            return self[name]
+        except KeyError:
+            return None
+
+    def get_joint_or_blank(self, name, priority=None, **kwargs):
         """ Return the joint named "item", or a blank one if missing """
         try:
             return self[name]
@@ -504,8 +511,36 @@ class OffsetJoint(AnimTransform):
         self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
 
     def __call__(self, anim):
-        joint = anim.ensure_joint(self.joint, locKeys=np.zeros(JointMotion.KEY_SIZE))
-        joint._locKeys += self.offset
+        joint = anim.get_joint_or_none(self.joint)
+        if joint is not None:
+            joint._locKeys += self.offset
+
+
+class SetJointLocation(AnimTransform):
+    def __init__(self, *args):
+        self.joint = 'mPelvis'
+        self.loc = np.zeros(JointMotion.KEY_SIZE)
+        if len(args) == 3:
+            self.loc[1:4] = args
+        elif len(args) == 4:
+            self.joint = args[0]
+            self.loc[1:4] = args[1:4]
+        else:
+            raise ValueError("3 or 4 arguments required")
+        # U16 version
+        # self.loc = np.array((self.loc / JointMotion.LOC_MAX + [0, 1, 1, 1]) / 2 * JointMotion.U16MAX + 0.5, JointMotion.U16)
+
+    def __call__(self, anim):
+        joint = anim.get_joint_or_none(self.joint)
+        if joint is not None:
+            offset = self.loc - joint.locKeysF[0]
+            print(f"offsetting {self.joint} by {offset[1:4]}")
+            joint.locKeysF += offset
+
+            # U16 version
+            # offset = self.loc - joint._locKeys[0]
+            # print(f"offsetting {self.joint} by {offset[1:4] * JointMotion.LOC_MAX * 2 / JointMotion.U16MAX}")
+            # joint._locKeys += offset
 
 
 class ScaleLocKeys(AnimTransform):
@@ -541,8 +576,8 @@ class AppendAnim(AnimTransform):
         for joint in self.extra_anim.joints:
             anim.ensure_joint(joint.name)
         for joint in anim.joints:
-            joint_1 = anim_1.get_joint(joint.name)
-            joint_2 = anim_2.get_joint(joint.name)
+            joint_1 = anim_1.get_joint_or_blank(joint.name)
+            joint_2 = anim_2.get_joint_or_blank(joint.name)
             joint.rotKeysF = np.concatenate([
                 joint_1.rotKeysF * scale_1,
                 joint_2.rotKeysF * scale_2 + offset_2,
@@ -829,6 +864,8 @@ def main():
 
         return str(output_path)
 
+    np.set_printoptions(precision=5, suppress=True)
+
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files',
             fromfile_prefix_chars='@', formatter_class=argparse.RawTextHelpFormatter)
@@ -858,6 +895,10 @@ File extension will be appended automatically""")
     "--offset mTail1 -0.2": move mTail1 down 0.2m
     "--offset 0.3 0.4 -0.5": move mPelvis forward 0.3m, left 0.4m, down 0.5m
     "--offset L_CLAVICLE 0.3 0.4 -0.5": move L_CLAVICLE forward 0.3m, left 0.4m, down 0.5m""")
+    parser.add_argument('--loc', action=AppendObjectAction,
+                        dest='actions', func=SetJointLocation, nargs='+',
+                        help="Move joint location on all keyframes so the starting location is at the given coordinates. "
+                             "Takes 4 arguments [joint] x y z. Joint is optional, and defaults to mPelvis")
     parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
                         dest='actions', func=MirrorJoints, nargs=0)
     parser.add_argument('--scale', action=AppendObjectAction,
