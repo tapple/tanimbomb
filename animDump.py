@@ -864,7 +864,7 @@ def main():
 
         return str(output_path)
 
-    np.set_printoptions(precision=5, suppress=True)
+    np.set_printoptions(precision=5, suppress=True, sign=' ', floatmode='fixed')
 
     parser = argparse.ArgumentParser(
             description='Manipulate Secondlife .anim files',
