@@ -494,27 +494,11 @@ class SetFrameRate(AnimTransform):
             anim.loop_end *= factor
 
 
-class OffsetJoint(AnimTransform):
-    def __init__(self, *args):
-        self.joint = 'mPelvis'
-        offset = np.zeros(JointMotion.KEY_SIZE)
-        if len(args) == 1:
-            offset[3] = args[0]
-        elif len(args) == 2:
-            self.joint = args[0]
-            offset[3] = args[1]
-        elif len(args) == 3:
-            offset[1:4] = args
-        elif len(args) == 4:
-            self.joint = args[0]
-            offset[1:4] = args[1:4]
-        else:
-            raise ValueError("1-4 arguments required")
-        self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
 class XYZTransform:
     def __init__(self, *commands: str):
         self.value = np.zeros(JointMotion.KEY_SIZE)
         self.defined = np.zeros(JointMotion.KEY_SIZE, dtype=bool)
+        for command in commands:
             self.add_command(command)
 
     def __repr__(self):
@@ -606,6 +590,8 @@ class SetJointLocation(AnimTransform):
             raise ValueError("3 or 4 arguments required")
         # U16 version
         # self.loc = np.array((self.loc / JointMotion.LOC_MAX + [0, 1, 1, 1]) / 2 * JointMotion.U16MAX + 0.5, JointMotion.U16)
+def offset_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransform):
+    joint.locKeysF += transform.value
 
     def __call__(self, anim):
         joint = anim.get_joint_or_none(self.joint)
