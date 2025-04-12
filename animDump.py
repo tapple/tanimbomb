@@ -536,9 +536,7 @@ class XYZTransformJointsMatching(AnimTransform):
         self.ignore_globs = list()
         current_glob = ""
         for glob in starting_globs + globs:
-            print(f"glob: {glob}; match_globs: {self.match_globs}")
             if XYZTransform.is_bone_glob(glob):
-                print(f"is_bone_glob")
                 if glob.startswith('+'):
                     self.ignore_globs.append(glob[1:])
                 else:
@@ -687,9 +685,6 @@ class MirrorJoints(AnimTransform):
             return name.replace("R ", "L ", 1)
         else:
             return name
-
-
-
 
 
 class SetJointPriority(AnimTransform):
