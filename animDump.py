@@ -587,13 +587,8 @@ def set_joint_loc(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransf
     joint.locKeysF += offset
 
 
-class ScaleLocKeys(AnimTransform):
-    def __init__(self, factor):
-        self.factor = np.array([1, factor, factor, factor])
-
-    def __call__(self, anim):
-        for joint in anim.joints:
-            joint.locKeysF *= self.factor
+def scale_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransform):
+    joint.locKeysF *= transform.value
 
 
 class AppendAnim(AnimTransform):
@@ -946,8 +941,11 @@ File extension will be appended automatically""")
                  """Joint is optional, and defaults to mPelvis. Example:
     "--loc mPelvis* 0x 0.25z": Move the animation so that it starts at 0 on x and 0.25 on z. Leave y alone""")
     parser.add_argument('--scale', action=AppendObjectAction,
-                        dest='actions', func=ScaleLocKeys, nargs=1, type=float,
-                        help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
+            dest='actions', func=XYZTransformJointsMatching, nargs='*',
+            transform_func=scale_joint, starting_globs=("*",),
+            help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar. Can specify joint patterns or x y z to control individual joints")
+    parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
+                        dest='actions', func=MirrorJoints, nargs=0)
     parser.add_argument('--append', action=AppendObjectAction,
                         dest='actions', func=AppendAnim, nargs=1, prepend=False,
                         help="Add keyframes another anim file to the end of the ease out")
