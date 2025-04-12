@@ -2,12 +2,14 @@
 
 import argparse
 import fnmatch
+import re
 import struct
 import copy
 import sys
 from pathlib import Path
 from textwrap import wrap
 import shutil
+from collections.abc import Callable
 import numpy as np
 
 
@@ -509,11 +511,86 @@ class OffsetJoint(AnimTransform):
         else:
             raise ValueError("1-4 arguments required")
         self.offset = np.array(offset / JointMotion.LOC_MAX / 2 * JointMotion.U16MAX, JointMotion.U16)
+class XYZTransform:
+    def __init__(self, *commands: str):
+        self.value = np.zeros(JointMotion.KEY_SIZE)
+        self.defined = np.zeros(JointMotion.KEY_SIZE, dtype=bool)
+            self.add_command(command)
+
+    def __repr__(self):
+        return f"""{self.__class__.__name__}{tuple(
+            str(v) + ' xyz'[i] 
+            for i, (v, d) in enumerate(zip(self.value, self.defined))
+            if d
+        )}"""
+
+    def __bool__(self):
+        return bool(self.defined.any())
+
+    @staticmethod
+    def is_bone_glob(command: str):
+        return len(re.findall(r'[a-wA-Z?*]', command)) > 0
+
+    def add_command(self, command: str):
+        letters = re.findall(r'[xyz]', command)
+        if len(letters) == 0:
+            self.defined[1:4] = True
+            self.value[1:4] = float(command)
+        elif len(letters) == 1:
+            letter = letters[0]
+            i = " xyz".index(letter)
+            value = float(command.replace(letter, ""))
+            self.defined[i] = True
+            self.value[i] = value
+        else:
+            raise ValueError(f"Must contain zero or one of x, y, or z: {command}")
+
+
+class XYZTransformJointsMatching(AnimTransform):
+    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str]):
+        self.match_globs: dict[str, XYZTransform] = {}
+        self.ignore_globs = list()
+        current_glob = ""
+        for glob in starting_globs + globs:
+            print(f"glob: {glob}; match_globs: {self.match_globs}")
+            if XYZTransform.is_bone_glob(glob):
+                print(f"is_bone_glob")
+                if glob.startswith('+'):
+                    self.ignore_globs.append(glob[1:])
+                else:
+                    self._discard_glob_if_zero(current_glob)
+                    self.match_globs[glob] = XYZTransform()
+                    current_glob = glob
+            elif current_glob:
+                self.match_globs[current_glob].add_command(glob)
+            else:
+                raise ValueError(f"No joints specified for {transform_func}")
+        self._discard_glob_if_zero(current_glob)
+        self.transform_func = transform_func
+
+    def _discard_glob_if_zero(self, current_glob):
+        if current_glob in self.match_globs and not self.match_globs[current_glob]:
+            del self.match_globs[current_glob]
+
+    def __repr__(self):
+        return "XYZTransformJointsMatching(%r, %r, %r)" % (self.match_globs,
+                                                        self.ignore_globs, self.transform_func)
+
+    def transform_for_joint(self, joint_name: str) -> XYZTransform:
+        for match_glob, transform in self.match_globs.items():
+            if (fnmatch.fnmatch(joint_name, match_glob)):
+                for ignore_glob in self.ignore_globs:
+                    if (fnmatch.fnmatch(joint_name, ignore_glob)):
+                        return XYZTransform()
+                return transform
+        return XYZTransform()
 
     def __call__(self, anim):
-        joint = anim.get_joint_or_none(self.joint)
-        if joint is not None:
-            joint._locKeys += self.offset
+        # iterate over a copy since joints may be removed
+        for joint in anim.joints[:]:
+            transform = self.transform_for_joint(joint.name)
+            if transform:
+                self.transform_func(anim, joint, transform)
 
 
 class SetJointLocation(AnimTransform):
