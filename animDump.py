@@ -689,14 +689,6 @@ class MirrorJoints(AnimTransform):
             return name
 
 
-class FreezeJoints(AnimTransform):
-    def __init__(self, *args):
-        pass
-
-    def __call__(self, anim):
-        for joint in anim.joints:
-            joint.locKeys = joint.locKeys[:1]
-            joint.rotKeys = joint.rotKeys[:1]
 
 
 
@@ -740,6 +732,11 @@ class TransformJointsMatching(AnimTransform):
         for joint in anim.joints[:]:
             if self.joint_matches(joint.name):
                 self.transform_func(anim, joint)
+
+
+def freeze_keyframes(anim: KeyframeMotion, joint: JointMotion):
+    joint.locKeys = joint.locKeys[:1]
+    joint.rotKeys = joint.rotKeys[:1]
 
 
 def dropLocationKeyframes(anim, joint):
@@ -952,9 +949,6 @@ File extension will be appended automatically""")
     parser.add_argument('--prepend', action=AppendObjectAction,
                         dest='actions', func=AppendAnim, nargs=1, prepend=True,
                         help="Add keyframes another anim file to the beginning of the ease in")
-    parser.add_argument('--freeze', action=AppendObjectAction,
-                        dest='actions', func=FreezeJoints, nargs=0,
-                        help="Turn an animation into a static pose by removing all keyframes except the pose at time zero")
     parser.add_argument('--sort', action=AppendObjectAction,
                         dest='actions', func=SortJoints,
                         help="Sort the joints by name in the output files")
@@ -980,6 +974,10 @@ File extension will be appended automatically""")
             dest='actions', func=SetAnimProperty, nargs=1,
             key='loop_end', type=float)
 
+    parser.add_argument('--freeze', '--static', action=AppendObjectAction,
+            dest='actions', func=TransformJointsMatching, nargs='*',
+            transform_func=freeze_keyframes, default_globs=("*",),
+            help="Freeze the given joint patterns by removing all keyframes except the first (if no joints given, freeze all joints)")
     parser.add_argument('--drop-loc', action=AppendObjectAction,
             dest='actions', func=TransformJointsMatching, nargs='*',
             transform_func=dropLocationKeyframes, default_globs=("*", "+mPelvis"),
