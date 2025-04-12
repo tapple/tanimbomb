@@ -712,25 +712,25 @@ class SetJointPriority(AnimTransform):
 
 
 class TransformJointsMatching(AnimTransform):
-    def __init__(self, *globs, jointTransform):
-        self.dropGlobs = list()
-        self.keepGlobs = list()
-        for glob in globs:
+    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion], None], default_globs=()):
+        self.match_globs = list()
+        self.ignore_globs = list()
+        for glob in globs or default_globs:
             if glob.startswith('+'):
-                self.keepGlobs.append(glob[1:])
+                self.ignore_globs.append(glob[1:])
             else:
-                self.dropGlobs.append(glob);
-        self.jointTransform = jointTransform
+                self.match_globs.append(glob);
+        self.transform_func = transform_func
 
     def __repr__(self):
-        return "TransformJointsMatching(%r, %r, %r)" % (self.dropGlobs,
-                self.keepGlobs, self.jointTransform)
+        return "TransformJointsMatching(%r, %r, %r)" % (self.match_globs,
+                self.ignore_globs, self.transform_func)
 
-    def _shouldDropJointNamed(self, jointName):
-        for dropGlob in self.dropGlobs:
-            if (fnmatch.fnmatch(jointName, dropGlob)):
-                for keepGlob in self.keepGlobs:
-                    if (fnmatch.fnmatch(jointName, keepGlob)):
+    def joint_matches(self, joint_name):
+        for dropGlob in self.match_globs:
+            if (fnmatch.fnmatch(joint_name, dropGlob)):
+                for keepGlob in self.ignore_globs:
+                    if (fnmatch.fnmatch(joint_name, keepGlob)):
                         return False
                 return True
         return False
@@ -738,8 +738,8 @@ class TransformJointsMatching(AnimTransform):
     def __call__(self, anim):
         # iterate over a copy since joints may be removed
         for joint in anim.joints[:]:
-            if self._shouldDropJointNamed(joint.name):
-                self.jointTransform(anim, joint)
+            if self.joint_matches(joint.name):
+                self.transform_func(anim, joint)
 
 
 def dropLocationKeyframes(anim, joint):
@@ -982,18 +982,21 @@ File extension will be appended automatically""")
 
     parser.add_argument('--drop-loc', action=AppendObjectAction,
             dest='actions', func=TransformJointsMatching, nargs='*',
-            jointTransform=dropLocationKeyframes)
+            transform_func=dropLocationKeyframes, default_globs=("*", "+mPelvis"),
+            help = "Drop location keyframes from the given joint patterns (if none specified, drop all except mPelvis)")
     parser.add_argument('--drop-rot', action=AppendObjectAction,
-            dest='actions', func=TransformJointsMatching, nargs='*',
-            jointTransform=dropRotationKeyframes)
+            dest='actions', func=TransformJointsMatching, nargs='+',
+            transform_func=dropRotationKeyframes, help = "Drop rotation keyframes from the given joint patterns")
     parser.add_argument('--drop-pri', action=AppendObjectAction,
             dest='actions', func=TransformJointsMatching, nargs='*',
-            jointTransform=dropPriority)
+            transform_func=dropPriority, default_globs=("*",),
+            help = "Drop per-joint priority from the given joint patterns (if none specified, drop from all joints)")
     parser.add_argument('--drop-joint', action=AppendObjectAction,
-            dest='actions', func=TransformJointsMatching, nargs='*',
-            jointTransform=dropJoint)
+            dest='actions', func=TransformJointsMatching, nargs='+',
+            transform_func=dropJoint, help = "Drop the given joint patterns")
     parser.add_argument('--drop-empty-joints', action=AppendObjectAction,
-            dest='actions', func=DropEmptyJoints)
+            dest='actions', func=DropEmptyJoints,
+            help = "Drop all joints that have 0 rotation keyframes and 0 location keyframes")
 
     parser.add_argument('--add-constraint', action=AppendObjectAction,
             dest='actions', func=AddConstraint, nargs=3)
