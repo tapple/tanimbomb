@@ -577,33 +577,14 @@ class XYZTransformJointsMatching(AnimTransform):
                 self.transform_func(anim, joint, transform)
 
 
-class SetJointLocation(AnimTransform):
-    def __init__(self, *args):
-        self.joint = 'mPelvis'
-        self.loc = np.zeros(JointMotion.KEY_SIZE)
-        if len(args) == 3:
-            self.loc[1:4] = args
-        elif len(args) == 4:
-            self.joint = args[0]
-            self.loc[1:4] = args[1:4]
-        else:
-            raise ValueError("3 or 4 arguments required")
-        # U16 version
-        # self.loc = np.array((self.loc / JointMotion.LOC_MAX + [0, 1, 1, 1]) / 2 * JointMotion.U16MAX + 0.5, JointMotion.U16)
 def offset_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransform):
     joint.locKeysF += transform.value
 
-    def __call__(self, anim):
-        joint = anim.get_joint_or_none(self.joint)
-        if joint is not None:
-            offset = self.loc - joint.locKeysF[0]
-            print(f"offsetting {self.joint} by {offset[1:4]}")
-            joint.locKeysF += offset
 
-            # U16 version
-            # offset = self.loc - joint._locKeys[0]
-            # print(f"offsetting {self.joint} by {offset[1:4] * JointMotion.LOC_MAX * 2 / JointMotion.U16MAX}")
-            # joint._locKeys += offset
+def set_joint_loc(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransform):
+    offset = (transform.value - joint.locKeysF[0]) * transform.defined
+    print(f"offsetting {joint.name} by {offset[1:4]}")
+    joint.locKeysF += offset
 
 
 class ScaleLocKeys(AnimTransform):
@@ -952,18 +933,18 @@ File extension will be appended automatically""")
     parser.add_argument('--frame-rate', '--fps', action=AppendObjectAction,
                         dest='actions', func=SetFrameRate, nargs=1, type=int)
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
-                        dest='actions', func=OffsetJoint, nargs='+',
-    help="""Adjust joint location on all keyframes. Takes 1-4 arguments [joint] [x y] z. Examples:
-    "--offset 0.5": move mPelvis up 0.5
-    "--offset mTail1 -0.2": move mTail1 down 0.2m
-    "--offset 0.3 0.4 -0.5": move mPelvis forward 0.3m, left 0.4m, down 0.5m
-    "--offset L_CLAVICLE 0.3 0.4 -0.5": move L_CLAVICLE forward 0.3m, left 0.4m, down 0.5m""")
+            dest='actions', func=XYZTransformJointsMatching, nargs='+',
+            transform_func=offset_joint, starting_globs=("mPelvis",),
+    help="""Adjust joint location on all the given joint patterns (mPelvis by default). Examples:
+    "--offset 0.5z": move mPelvis up 0.5
+    "--offset mFaceNose* -0.2y 0.1x": move nose bones right 0.2m, forward 0.1m""")
     parser.add_argument('--loc', action=AppendObjectAction,
-                        dest='actions', func=SetJointLocation, nargs='+',
-                        help="Move joint location on all keyframes so the starting location is at the given coordinates. "
-                             "Takes 4 arguments [joint] x y z. Joint is optional, and defaults to mPelvis")
-    parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
-                        dest='actions', func=MirrorJoints, nargs=0)
+            dest='actions', func=XYZTransformJointsMatching, nargs='+',
+            transform_func=set_joint_loc, starting_globs=("mPelvis",),
+            help="Move joint location on all keyframes so the starting location is at the given coordinates. "
+                 "Specify x y z to select which coordinates to set; missing axes will remain unchanged. "
+                 """Joint is optional, and defaults to mPelvis. Example:
+    "--loc mPelvis* 0x 0.25z": Move the animation so that it starts at 0 on x and 0.25 on z. Leave y alone""")
     parser.add_argument('--scale', action=AppendObjectAction,
                         dest='actions', func=ScaleLocKeys, nargs=1, type=float,
                         help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar")
