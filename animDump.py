@@ -495,8 +495,8 @@ class SetFrameRate(AnimTransform):
 
 
 class XYZTransform:
-    def __init__(self, *commands: str):
-        self.value = np.zeros(JointMotion.KEY_SIZE)
+    def __init__(self, *commands: str, initial_value:float=0):
+        self.value = np.zeros(JointMotion.KEY_SIZE) + initial_value
         self.defined = np.zeros(JointMotion.KEY_SIZE, dtype=bool)
         for command in commands:
             self.add_command(command)
@@ -531,7 +531,7 @@ class XYZTransform:
 
 
 class XYZTransformJointsMatching(AnimTransform):
-    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str]):
+    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str], initial_value:float=0):
         self.match_globs: dict[str, XYZTransform] = {}
         self.ignore_globs = list()
         current_glob = ""
@@ -541,7 +541,7 @@ class XYZTransformJointsMatching(AnimTransform):
                     self.ignore_globs.append(glob[1:])
                 else:
                     self._discard_glob_if_zero(current_glob)
-                    self.match_globs[glob] = XYZTransform()
+                    self.match_globs[glob] = XYZTransform(initial_value=initial_value)
                     current_glob = glob
             elif current_glob:
                 self.match_globs[current_glob].add_command(glob)
@@ -934,7 +934,7 @@ File extension will be appended automatically""")
     "--loc mPelvis* 0x 0.25z": Move the animation so that it starts at 0 on x and 0.25 on z. Leave y alone""")
     parser.add_argument('--scale', action=AppendObjectAction,
             dest='actions', func=XYZTransformJointsMatching, nargs='*',
-            transform_func=scale_joint, starting_globs=("*",),
+            transform_func=scale_joint, starting_globs=("*",), initial_value=1,
             help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar. Can specify joint patterns or x y z to control individual joints")
     parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
                         dest='actions', func=MirrorJoints, nargs=0)
