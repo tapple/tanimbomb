@@ -142,15 +142,6 @@ class JointMotion(object):
     def get_locKeysF(self, dur=1.0, round_zero=True):
         return self.keys_int_to_float(self.locKeys, self.LOC_MAX, dur=dur, round_zero=round_zero)
 
-    def loc_range_squared(self):
-        locKeysF = self.locKeysF
-        if len(locKeysF) == 0:
-            return 0
-        return np.max(np.sum((locKeysF[:, 1:] - locKeysF[0, 1:]) ** 2, axis=1))
-
-    def loc_range(self):
-        return np.sqrt(self.loc_range_squared())
-
     @classmethod
     def keys_int_to_float(cls, keys, scale=1.0, dur=1.0, round_zero=True):
         m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
@@ -168,6 +159,15 @@ class JointMotion(object):
         m = array([dur, 2*scale, 2*scale, 2*scale]) / cls.U16MAX
         b = array([0, -scale, -scale, -scale])
         return (keys - b) / m
+
+    def loc_range_squared(self):
+        locKeysF = self.locKeysF
+        if len(locKeysF) == 0:
+            return 0
+        return np.max(np.sum((locKeysF[:, 1:] - locKeysF[0, 1:]) ** 2, axis=1))
+
+    def loc_range(self):
+        return np.sqrt(self.loc_range_squared())
 
     @classmethod
     def deserialize_keys(cls, stream, keyCount):
@@ -633,6 +633,42 @@ class AppendAnim(AnimTransform):
         anim.duration = new_dur
 
 
+def interp_get(arr, t) -> tuple[np.ndarray, int]:
+    i = np.searchsorted(arr[:, 0], t)
+    if 1 == 0 or i == len(arr):
+        return arr[i], i
+    a = arr[i-1]
+    b = arr[i]
+    return a + (b - a) * (t - a[0]) / (b[0]- a[0]), i
+
+
+def interp_insert(arr, t) -> tuple[np.ndarray, int]:
+    if len(arr) == 0:
+        return arr, 0
+    v, i = interp_get(arr, t)
+    return np.insert(arr, i, v, 0), i
+
+
+class RightTruncateAnim(AnimTransform):
+    def __init__(self, t):
+        self.t = t
+
+    def __call__(self, anim: KeyframeMotion):
+        t_frac = self.t / anim.duration
+        if t_frac > 1:
+            return
+
+        t_ufrac = t_frac * JointMotion.U16MAX
+        t_scale = np.array([1/t_frac, 1, 1, 1])
+        for joint in anim.joints:
+            keys, i = interp_insert(joint.locKeys, t_ufrac)
+            joint.locKeys = keys[:i] * t_scale
+            keys, i = interp_insert(joint.rotKeys, t_ufrac)
+            joint.rotKeys = keys[:i] * t_scale
+
+        anim.duration = self.t
+
+
 class MirrorJoints(AnimTransform):
     ROTATED_JOINTS = {
         "CHEST": [0, -10, 0],
@@ -936,14 +972,17 @@ File extension will be appended automatically""")
             dest='actions', func=XYZTransformJointsMatching, nargs='*',
             transform_func=scale_joint, starting_globs=("*",), initial_value=1,
             help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar. Can specify joint patterns or x y z to control individual joints")
-    parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
-                        dest='actions', func=MirrorJoints, nargs=0)
     parser.add_argument('--append', action=AppendObjectAction,
                         dest='actions', func=AppendAnim, nargs=1, prepend=False,
                         help="Add keyframes another anim file to the end of the ease out")
     parser.add_argument('--prepend', action=AppendObjectAction,
                         dest='actions', func=AppendAnim, nargs=1, prepend=True,
                         help="Add keyframes another anim file to the beginning of the ease in")
+    parser.add_argument('--trim' '--rtrim', '--trunc', '--rtrunc', action=AppendObjectAction,
+                        dest='actions', func=RightTruncateAnim, nargs=1, type=float,
+                        help="Remove the end of the animation starting at the given time")
+    parser.add_argument('--mirror', '--flip', action=AppendObjectAction,
+                        dest='actions', func=MirrorJoints, nargs=0)
     parser.add_argument('--sort', action=AppendObjectAction,
                         dest='actions', func=SortJoints,
                         help="Sort the joints by name in the output files")
