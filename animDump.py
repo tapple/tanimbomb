@@ -589,6 +589,28 @@ def scale_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransfor
     joint.locKeysF *= transform.value
 
 
+class ExtendAnim(AnimTransform):
+    def __init__(self, dur, prepend=False):
+        self.dur = dur
+        self.prepend = prepend
+
+    def __call__(self, anim: KeyframeMotion):
+        new_dur = anim.duration + self.dur
+        scale_factor = anim.duration / new_dur
+        scale  = np.array([scale_factor, 1, 1, 1])
+        offset = np.array([0, 0, 0, 0])
+        if self.prepend:
+            offset[0] =1 - scale_factor
+        for joint in anim.joints:
+            joint.rotKeysF = joint.rotKeysF * scale + offset
+            joint.locKeysF = joint.locKeysF * scale + offset
+
+        if self.prepend:
+            anim.loop_start += self.dur
+            anim.loop_end   += self.dur
+        anim.duration = new_dur
+
+
 class AppendAnim(AnimTransform):
     DUR_MIN = 0.01
 
@@ -972,6 +994,12 @@ File extension will be appended automatically""")
             dest='actions', func=XYZTransformJointsMatching, nargs='*',
             transform_func=scale_joint, starting_globs=("*",), initial_value=1,
             help="Scale location keys; eg 2.0 for double-size avatar, 0.5 for half-size avatar. Can specify joint patterns or x y z to control individual joints")
+    parser.add_argument('--extend', action=AppendObjectAction,
+                        dest='actions', func=ExtendAnim, nargs=1, type=float, prepend=False,
+                        help="Hold the final pose for the given number of seconds in the outro of the animation")
+    parser.add_argument('--delay', action=AppendObjectAction,
+                        dest='actions', func=ExtendAnim, nargs=1, type=float, prepend=True,
+                        help="Add the given number of seconds to the intro of the animation")
     parser.add_argument('--append', action=AppendObjectAction,
                         dest='actions', func=AppendAnim, nargs=1, prepend=False,
                         help="Add keyframes another anim file to the end of the ease out")
