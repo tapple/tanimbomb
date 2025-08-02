@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name='tanimbomb'
+version = "0.0.0"
+dependencies = ["numpy"]
+scripts = { animDump = "animDump:main" }
+
+[tool.setuptools]
+py-modules = ["animDump"]
