@@ -179,16 +179,19 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
-    def create_fcurves(self, action, dur, armature, nt=-0.002):
-        bone_rot = armature.data.bones[self.name].matrix_local.to_quaternion()
+    def create_fcurves(self, action, dur, armature, nt=-0.002, use_avastar=False):
+        name = self.name
+        if use_avastar and name[0] in "am":
+            name = name[1:]
+        bone_rot = armature.data.bones[name].matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
-            data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
+            data_path = ('pose.bones["%s"].rotation_quaternion' % name)
             # print("data_path = %s" % data_path)
-            fw = action.fcurves.new(data_path, 0, self.name)
-            fx = action.fcurves.new(data_path, 1, self.name)
-            fy = action.fcurves.new(data_path, 2, self.name)
-            fz = action.fcurves.new(data_path, 3, self.name)
+            fw = action.fcurves.new(data_path, 0, name)
+            fx = action.fcurves.new(data_path, 1, name)
+            fy = action.fcurves.new(data_path, 2, name)
+            fz = action.fcurves.new(data_path, 3, name)
             qp = Quaternion((0, 0, 0, 0))
             negate = False
             for t, x, y, z in self.get_rotKeysF(dur):
@@ -210,11 +213,15 @@ class JointMotion(object):
                 fy.keyframe_points.insert(t, q.y)
                 fz.keyframe_points.insert(t, q.z)
         if self.locKeys.size:
-            data_path = 'pose.bones["%s"].location' % self.name
+            if use_avastar and self.name == "mPelvis":
+                name = "COG"
+                bone_rot = armature.data.bones[name].matrix_local.to_quaternion()
+                bone_rot_inv = bone_rot.inverted()
+            data_path = 'pose.bones["%s"].location' % name
             # print("data_path = %s" % data_path)
-            fx = action.fcurves.new(data_path, 0, self.name)
-            fy = action.fcurves.new(data_path, 1, self.name)
-            fz = action.fcurves.new(data_path, 2, self.name)
+            fx = action.fcurves.new(data_path, 0, name)
+            fy = action.fcurves.new(data_path, 1, name)
+            fz = action.fcurves.new(data_path, 2, name)
             for t, x, y, z in self.get_locKeysF(dur):
                 # print("%ft %fx %fy %fz" % (t, x, y, z))
                 v = Vector((y, -x, z))
@@ -222,8 +229,8 @@ class JointMotion(object):
                 fx.keyframe_points.insert(t, v.x)
                 fy.keyframe_points.insert(t, v.y)
                 fz.keyframe_points.insert(t, v.z)
-        data_path = 'pose.bones["%s"]["priority"]' % self.name
-        f = action.fcurves.new(data_path, 0, self.name)
+        data_path = 'pose.bones["%s"]["priority"]' % name
+        f = action.fcurves.new(data_path, 0, name)
         f.keyframe_points.insert(0, self.priority)
 
     def __repr__(self):
@@ -346,24 +353,27 @@ class KeyframeMotion(object):
         for constraint in self.constraints:
             print(constraint.dump())
     
-    def create_action(self, name, armature):
+    def create_action(self, name, armature, use_avastar=False):
         print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
         armature.animation_data.action = action
 
-        action.AnimProps.Priority = self.priority
-        action.AnimProps.frame_start = 0
-        action.AnimProps.frame_end = self.duration * self.frameRate + 0.5
-        # action.AnimProps.??? = self.emote
-        action.AnimProps.Loop = self.loop
-        action.AnimProps.Loop_In = self.loopIn * self.frameRate + 0.5
-        action.AnimProps.Loop_Out = self.loopOut * self.frameRate + 0.5
-        action.AnimProps.Ease_In = self.easeIn
-        action.AnimProps.Ease_Out = self.easeOut
-        action.AnimProps.Hand_Posture = str(self.handPosture)
-        action.AnimProps.fps = self.frameRate
+        try:
+            action.AnimProps.Priority = self.priority
+            action.AnimProps.frame_start = 0
+            action.AnimProps.frame_end = self.duration * self.frameRate + 0.5
+            # action.AnimProps.??? = self.emote
+            action.AnimProps.Loop = self.loop
+            action.AnimProps.Loop_In = self.loopIn * self.frameRate + 0.5
+            action.AnimProps.Loop_Out = self.loopOut * self.frameRate + 0.5
+            action.AnimProps.Ease_In = self.easeIn
+            action.AnimProps.Ease_Out = self.easeOut
+            action.AnimProps.Hand_Posture = str(self.handPosture)
+            action.AnimProps.fps = self.frameRate
+        except AttributeError:
+            pass  # avastar not installed; don't set its extra properties
         for joint in self.joints:
-            joint.create_fcurves(action, self.duration * self.frameRate, armature)
+            joint.create_fcurves(action, self.duration * self.frameRate, armature, use_avastar=use_avastar)
         for cu in action.fcurves:
             for bez in cu.keyframe_points:
                 bez.interpolation = 'LINEAR'
@@ -405,7 +415,7 @@ def active_armature():
     raise RuntimeError("Please select an armature before importing")
 
 
-def load(filename, armature=None):
+def load(filename, armature=None, use_avastar=False):
     filepath = Path(filename)
     if not armature:
         armature = active_armature()
@@ -414,7 +424,7 @@ def load(filename, armature=None):
         anim.deserialize(file)
         # anim.summarize(file.name)
         # anim.dump()
-        print(anim.create_action(filepath.stem, armature))
+        print(anim.create_action(filepath.stem, armature, use_avastar=use_avastar))
 
 
 class ImportANIM(bpy.types.Operator, ImportHelper):
@@ -426,12 +436,16 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
     filename_ext = ".anim"
     filter_glob = StringProperty(default="*.anim", options={'HIDDEN'})
     files = CollectionProperty(type=bpy.types.PropertyGroup)
+    use_avastar = bpy.props.BoolProperty(
+        name="Avastar Control", description="Import the animations onto "
+        "Avastar's control bones, rather than the raw deformation bones")
 
     def execute(self, context):
         folder = os.path.dirname(self.filepath)
         for file in self.files:
             filename = os.path.join(folder, file.name)
-            load(filename)
+            print(filename)
+            load(filename, use_avastar=self.use_avastar)
         return {'FINISHED'}
 
 
@@ -452,31 +466,4 @@ def unregister():
 
 if __name__ == "__main__":
 #    register()
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Animation Tab/TH_lay1.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_sit3.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-x.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
-
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_z.anim')
+    load('/home/tapple/Downloads/rider_rack.anim', use_avastar=True)
