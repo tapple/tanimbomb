@@ -557,16 +557,21 @@ class XYZTransform(TransformBuilder):
 
 
 class XYZQuaternionTransform(TransformBuilder):
-    def __init__(self, *commands: str, initial_value:float=0):
-        self.value = quaternion.one
+    def __init__(self, *commands: str, initial_value:float|np.quaternion=0):
+        import quaternion  # optional dependency; raise ImportError here if missing
+        if isinstance(initial_value, np.quaternion):
+            self.value = initial_value
+        else:
+            self.value = quaternion.one
         for command in commands:
             self.add_command(command)
 
     def __repr__(self):
         return f"""{self.__class__.__name__}{tuple(
-            str(v) + 'zyz'[i] 
+            #str(v) + 'zyz'[i]
+            f"{round(v, 4)}{'zyz'[i]}" 
             for i, v in enumerate(np.degrees(quaternion.as_euler_angles(self.value)))
-            if v
+            if abs(v) > 0.0001
         )}"""
 
     def __bool__(self):
@@ -582,6 +587,7 @@ class XYZQuaternionTransform(TransformBuilder):
             self.value *= quaternion.from_rotation_vector(r)
         else:
             raise ValueError(f"Must contain one of x, y, or z: {command}")
+
 
 class XYZTransformJointsMatching(AnimTransform):
     def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str], transform_factory=XYZTransform, initial_value:float=0):
