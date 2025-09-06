@@ -6,6 +6,7 @@ import re
 import struct
 import copy
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 from textwrap import wrap
 import shutil
@@ -142,8 +143,8 @@ class JointMotion(object):
     def rotKeysQ(self):
         import quaternion  # optional dependency; raise ImportError here if missing
         fkeys = self.rotKeysF
-        w = 1 - np.linalg.norm(fkeys[:, 1:4], axis=1)[:, np.newaxis]
-        q = quaternion.from_float_array(np.concat((w, fkeys[:, 1:4]), axis=1))
+        w = 1 - np.linalg.norm(fkeys[:, 1:], axis=1)[:, np.newaxis]
+        q = quaternion.from_float_array(np.concat((w, fkeys[:, 1:]), axis=1))
         return np.rec.fromarrays((fkeys[:, 1], q), dtype=qkey)
 
     @rotKeysQ.setter
@@ -512,8 +513,18 @@ class SetFrameRate(AnimTransform):
             anim.loop_start *= factor
             anim.loop_end *= factor
 
+class TransformBuilder(ABC):
+    def __init__(self, *commands: str, initial_value:float=0):
+        for command in commands:
+            self.add_command(command)
 
-class XYZTransform:
+    @abstractmethod
+    def __bool__(self): ...
+
+    @abstractmethod
+    def add_command(self, command: str): ...
+
+class XYZTransform(TransformBuilder):
     def __init__(self, *commands: str, initial_value:float=0):
         self.value = np.zeros(JointMotion.KEY_SIZE) + initial_value
         self.defined = np.zeros(JointMotion.KEY_SIZE, dtype=bool)
@@ -522,17 +533,13 @@ class XYZTransform:
 
     def __repr__(self):
         return f"""{self.__class__.__name__}{tuple(
-            str(v) + ' xyz'[i] 
+            str(v) + ' xyz'[i]
             for i, (v, d) in enumerate(zip(self.value, self.defined))
             if d
         )}"""
 
     def __bool__(self):
         return bool(self.defined.any())
-
-    @staticmethod
-    def is_bone_glob(command: str):
-        return len(re.findall(r'[a-wA-Z?*]', command)) > 0
 
     def add_command(self, command: str):
         letters = re.findall(r'[xyz]', command)
@@ -549,13 +556,40 @@ class XYZTransform:
             raise ValueError(f"Must contain zero or one of x, y, or z: {command}")
 
 
+class XYZQuaternionTransform(TransformBuilder):
+    def __init__(self, *commands: str, initial_value:float=0):
+        self.value = quaternion.one
+        for command in commands:
+            self.add_command(command)
+
+    def __repr__(self):
+        return f"""{self.__class__.__name__}{tuple(
+            str(v) + 'zyz'[i] 
+            for i, v in enumerate(np.degrees(quaternion.as_euler_angles(self.value)))
+            if v
+        )}"""
+
+    def __bool__(self):
+        return self.value != quaternion.one
+
+    def add_command(self, command: str):
+        letters = re.findall(r'[xyz]', command)
+        if len(letters) == 1:
+            letter = letters[0]
+            i = "xyz".index(letter)
+            r = np.zeros(3)
+            r[i] = np.radians(float(command.replace(letter, "")))
+            self.value *= quaternion.from_rotation_vector(r)
+        else:
+            raise ValueError(f"Must contain one of x, y, or z: {command}")
+
 class XYZTransformJointsMatching(AnimTransform):
-    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str], initial_value:float=0):
+    def __init__(self, *globs: str, transform_func: Callable[[KeyframeMotion, JointMotion, XYZTransform], None], starting_globs: tuple[str], transform_factory=XYZTransform, initial_value:float=0):
         self.match_globs: dict[str, XYZTransform] = {}
         self.ignore_globs = list()
         current_glob = ""
         for glob in starting_globs + globs:
-            if XYZTransform.is_bone_glob(glob):
+            if self.is_bone_glob(glob):
                 if glob.startswith('+'):
                     self.ignore_globs.append(glob[1:])
                 else:
@@ -568,6 +602,10 @@ class XYZTransformJointsMatching(AnimTransform):
                 raise ValueError(f"No joints specified for {transform_func}")
         self._discard_glob_if_zero(current_glob)
         self.transform_func = transform_func
+
+    @staticmethod
+    def is_bone_glob(command: str):
+        return len(re.findall(r'[a-wA-Z?*]', command)) > 0
 
     def _discard_glob_if_zero(self, current_glob):
         if current_glob in self.match_globs and not self.match_globs[current_glob]:
