@@ -12,6 +12,13 @@ import shutil
 from collections.abc import Callable
 import numpy as np
 
+try:
+    import quaternion
+    HAS_QUATERNION = True
+    qkey = np.dtype([("t", np.float32), ("q", np.quaternion)])
+except ImportError:
+    HAS_QUATERNION = False
+
 
 def array(*args, **kwargs):
     kwargs.setdefault("dtype", np.float32)
@@ -130,6 +137,18 @@ class JointMotion(object):
 
     def get_rotKeysF(self, dur=1.0, round_zero = True):
         return self.keys_int_to_float(self.rotKeys, dur=dur, round_zero=round_zero)
+
+    @property
+    def rotKeysQ(self):
+        import quaternion  # optional dependency; raise ImportError here if missing
+        fkeys = self.rotKeysF
+        w = 1 - np.linalg.norm(fkeys[:, 1:4], axis=1)[:, np.newaxis]
+        q = quaternion.from_float_array(np.concat((w, fkeys[:, 1:4]), axis=1))
+        return np.rec.fromarrays((fkeys[:, 1], q), dtype=qkey)
+
+    @rotKeysQ.setter
+    def rotKeysQ(self, value):
+        self.rotKeysF = np.concat((value.t[:, np.newaxis], quaternion.as_float_array(value.q)[:, 1:]), axis=1)
 
     @property
     def locKeysF(self):

@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name='tanimbomb'
 version = "0.0.0"
 dependencies = ["numpy"]
+optional-dependencies = { quaternion = ["numpy-quaternion"] }
 scripts = { animDump = "animDump:main" }
 
 [tool.setuptools]
