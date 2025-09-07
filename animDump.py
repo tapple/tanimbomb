@@ -568,7 +568,6 @@ class XYZQuaternionTransform(TransformBuilder):
 
     def __repr__(self):
         return f"""{self.__class__.__name__}{tuple(
-            #str(v) + 'zyz'[i]
             f"{round(v, 4)}{'zyz'[i]}" 
             for i, v in enumerate(np.degrees(quaternion.as_euler_angles(self.value)))
             if abs(v) > 0.0001
@@ -600,7 +599,7 @@ class XYZTransformJointsMatching(AnimTransform):
                     self.ignore_globs.append(glob[1:])
                 else:
                     self._discard_glob_if_zero(current_glob)
-                    self.match_globs[glob] = XYZTransform(initial_value=initial_value)
+                    self.match_globs[glob] = transform_factory(initial_value=initial_value)
                     current_glob = glob
             elif current_glob:
                 self.match_globs[current_glob].add_command(glob)
@@ -608,6 +607,7 @@ class XYZTransformJointsMatching(AnimTransform):
                 raise ValueError(f"No joints specified for {transform_func}")
         self._discard_glob_if_zero(current_glob)
         self.transform_func = transform_func
+        self.transform_factory = transform_factory
 
     @staticmethod
     def is_bone_glob(command: str):
@@ -626,9 +626,9 @@ class XYZTransformJointsMatching(AnimTransform):
             if (fnmatch.fnmatch(joint_name, match_glob)):
                 for ignore_glob in self.ignore_globs:
                     if (fnmatch.fnmatch(joint_name, ignore_glob)):
-                        return XYZTransform()
+                        return self.transform_factory()
                 return transform
-        return XYZTransform()
+        return self.transform_factory()
 
     def __call__(self, anim):
         # iterate over a copy since joints may be removed
@@ -646,6 +646,12 @@ def set_joint_loc(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransf
     offset = (transform.value - joint.locKeysF[0]) * transform.defined
     print(f"offsetting {joint.name} by {offset[1:4]}")
     joint.locKeysF += offset
+
+
+def rotate_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZQuaternionTransform):
+    qkeys = joint.rotKeysQ
+    qkeys.q *= transform.value
+    joint.rotKeysQ = qkeys
 
 
 def scale_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransform):
@@ -1053,6 +1059,13 @@ File extension will be appended automatically""")
                  "Specify x y z to select which coordinates to set; missing axes will remain unchanged. "
                  """Joint is optional, and defaults to mPelvis. Example:
     "--loc mPelvis* 0x 0.25z": Move the animation so that it starts at 0 on x and 0.25 on z. Leave y alone""")
+    if HAS_QUATERNION:
+        parser.add_argument('--rotate', '--rot', action=AppendObjectAction,
+            dest='actions', func=XYZTransformJointsMatching, nargs='+',
+            transform_func=rotate_joint, transform_factory=XYZQuaternionTransform, starting_globs=("mPelvis",),
+        help="""Rotate each given joint (or mPelvis by default) on the given axes the given joint patterns. Examples:
+        "--rot 45z": rotate mPelvis 45° left around z
+        "--rot mFaceNose* -20y mFaceJaw 30y": rotate nose bones 20° up; rotate jaw 30° down""")
     parser.add_argument('--scale', action=AppendObjectAction,
             dest='actions', func=XYZTransformJointsMatching, nargs='*',
             transform_func=scale_joint, starting_globs=("*",), initial_value=1,
