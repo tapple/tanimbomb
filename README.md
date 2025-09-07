@@ -52,11 +52,16 @@ mirrored/Stand-Shoulder-Right.anim      : P4 25R  1L (0.00m) 0C 0.3-0.3Es  2.667
 All animation manipulations:
 ```
 $ animDump --help
-usage: animDump [-h] [--verbose] [--unordered] [--markdown] [--outputfile-pattern OUTPUTFILE_PATTERN] [--time-scale ACTIONS] [--frame-rate ACTIONS] [--offset ACTIONS [ACTIONS ...]] [--loc ACTIONS [ACTIONS ...]] [--rotate ACTIONS [ACTIONS ...]]
-                [--scale [ACTIONS ...]] [--extend ACTIONS] [--delay ACTIONS] [--append ACTIONS] [--prepend ACTIONS] [--trim--rtrim ACTIONS] [--mirror] [--sort] [--joint-pri ACTIONS ACTIONS] [--pri ACTIONS] [--ease-in ACTIONS] [--ease-out ACTIONS]
-                [--loop ACTIONS] [--loop-start ACTIONS] [--loop-end ACTIONS] [--freeze [ACTIONS ...]] [--drop-loc [ACTIONS ...]] [--drop-rot ACTIONS [ACTIONS ...]] [--drop-pri [ACTIONS ...]] [--drop-joint ACTIONS [ACTIONS ...]] [--drop-empty-joints]
-                [--add-constraint ACTIONS ACTIONS ACTIONS] [--drop-constraints] [--c-plane] [--c-ease ACTIONS ACTIONS ACTIONS ACTIONS] [--c-source-offset ACTIONS ACTIONS ACTIONS] [--c-target-offset ACTIONS ACTIONS ACTIONS]
-                [--c-target-dir ACTIONS ACTIONS ACTIONS]
+usage: animDump [-h] [--verbose] [--unordered] [--markdown] [--outputfile-pattern OUTPUTFILE_PATTERN] [--time-scale ACTIONS]
+                [--frame-rate ACTIONS] [--offset ACTIONS [ACTIONS ...]] [--loc ACTIONS [ACTIONS ...]]
+                [--rotate ACTIONS [ACTIONS ...]] [--scale [ACTIONS ...]] [--extend ACTIONS] [--delay ACTIONS] [--append ACTIONS]
+                [--prepend ACTIONS] [--trim--rtrim ACTIONS] [--mirror] [--sort] [--joint-pri ACTIONS ACTIONS] [--pri ACTIONS]
+                [--ease-in ACTIONS] [--ease-out ACTIONS] [--loop ACTIONS] [--loop-start ACTIONS] [--loop-end ACTIONS]
+                [--freeze [ACTIONS ...]] [--drop-loc [ACTIONS ...]] [--drop-rot ACTIONS [ACTIONS ...]]
+                [--drop-pri [ACTIONS ...]] [--drop-joint ACTIONS [ACTIONS ...]] [--drop-empty-joints]
+                [--add-constraint ACTIONS ACTIONS ACTIONS] [--drop-constraints] [--c-plane]
+                [--c-ease ACTIONS ACTIONS ACTIONS ACTIONS] [--c-source-offset ACTIONS ACTIONS ACTIONS]
+                [--c-target-offset ACTIONS ACTIONS ACTIONS] [--c-target-dir ACTIONS ACTIONS ACTIONS]
                 files [files ...]
 
 Manipulate Secondlife .anim files
@@ -126,7 +131,6 @@ options:
   --c-source-offset ACTIONS ACTIONS ACTIONS
   --c-target-offset ACTIONS ACTIONS ACTIONS
   --c-target-dir ACTIONS ACTIONS ACTIONS
-
 ```
 
 Similar projects:
