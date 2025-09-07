@@ -1063,9 +1063,9 @@ File extension will be appended automatically""")
         parser.add_argument('--rotate', '--rot', action=AppendObjectAction,
             dest='actions', func=XYZTransformJointsMatching, nargs='+',
             transform_func=rotate_joint, transform_factory=XYZQuaternionTransform, starting_globs=("mPelvis",),
-        help="""Rotate each given joint (or mPelvis by default) on the given axes the given joint patterns. Examples:
-        "--rot 45z": rotate mPelvis 45° left around z
-        "--rot mFaceNose* -20y mFaceJaw 30y": rotate nose bones 20° up; rotate jaw 30° down""")
+    help="""Rotate each given joint (or mPelvis by default) on the given axes the given joint patterns. Examples:
+    "--rot 45z": rotate mPelvis 45° left around z
+    "--rot mFaceNose* -20y mFaceJaw 30y": rotate nose bones 20° up; rotate jaw 30° down""")
     parser.add_argument('--scale', action=AppendObjectAction,
             dest='actions', func=XYZTransformJointsMatching, nargs='*',
             transform_func=scale_joint, starting_globs=("*",), initial_value=1,
