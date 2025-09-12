@@ -143,13 +143,16 @@ class JointMotion(object):
     def rotKeysQ(self):
         import quaternion  # optional dependency; raise ImportError here if missing
         fkeys = self.rotKeysF
-        w = 1 - np.linalg.norm(fkeys[:, 1:], axis=1)[:, np.newaxis]
-        q = quaternion.from_float_array(np.concat((w, fkeys[:, 1:]), axis=1))
-        return np.rec.fromarrays((fkeys[:, 1], q), dtype=qkey)
+        xyz=fkeys[:, 1:]
+        w = np.sqrt(1 - np.vecdot(xyz, xyz))[:, np.newaxis]
+        q = quaternion.from_float_array(np.concat((w, xyz), axis=1))
+        return np.rec.fromarrays((fkeys[:, 0], q), dtype=qkey)
 
     @rotKeysQ.setter
     def rotKeysQ(self, value):
-        self.rotKeysF = np.concat((value.t[:, np.newaxis], quaternion.as_float_array(value.q)[:, 1:]), axis=1)
+        a = quaternion.as_float_array(value.q)
+        sign = ((a[:, 0] >= 0) * 2 - 1)[:, np.newaxis]
+        self.rotKeysF = np.concat((value.t[:, np.newaxis], a[:, 1:] * sign), axis=1)
 
     @property
     def locKeysF(self):
@@ -583,7 +586,7 @@ class XYZQuaternionTransform(TransformBuilder):
             i = "xyz".index(letter)
             r = np.zeros(3)
             r[i] = np.radians(float(command.replace(letter, "")))
-            self.value *= quaternion.from_rotation_vector(r)
+            self.value = quaternion.from_rotation_vector(r) * self.value
         else:
             raise ValueError(f"Must contain one of x, y, or z: {command}")
 
@@ -650,7 +653,7 @@ def set_joint_loc(anim: KeyframeMotion, joint: JointMotion, transform: XYZTransf
 
 def rotate_joint(anim: KeyframeMotion, joint: JointMotion, transform: XYZQuaternionTransform):
     qkeys = joint.rotKeysQ
-    qkeys.q *= transform.value
+    qkeys.q = transform.value * qkeys.q
     joint.rotKeysQ = qkeys
 
 
