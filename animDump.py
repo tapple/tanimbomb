@@ -572,7 +572,7 @@ class XYZQuaternionTransform(TransformBuilder):
     def __repr__(self):
         return f"""{self.__class__.__name__}{tuple(
             f"{round(v, 4)}{'zyz'[i]}" 
-            for i, v in enumerate(np.degrees(quaternion.as_euler_angles(self.value)))
+            for i, v in enumerate(reversed(np.degrees(quaternion.as_euler_angles(self.value))))
             if abs(v) > 0.0001
         )}"""
 
