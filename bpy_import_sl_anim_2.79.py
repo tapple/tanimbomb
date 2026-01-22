@@ -182,9 +182,16 @@ class JointMotion(object):
 
     def create_fcurves(self, action, dur, armature, nt=-0.002, use_avastar=False):
         name = self.name
-        if use_avastar and name[0] in "am":
+        if use_avastar and name[0] == "m":
             name = name[1:]
-        bone_rot = armature.data.bones[name].matrix_local.to_quaternion()
+        try:
+            bone = armature.data.bones[name]
+        except KeyError: # try Avastar attach point bone
+            try:
+                bone = armature.data.bones["a" + name]
+            except KeyError:
+                raise KeyError("Unknown bone names: %s, a%s" % (name, name))
+        bone_rot = bone.matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
             data_path = ('pose.bones["%s"].rotation_quaternion' % name)
@@ -443,10 +450,13 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         folder = os.path.dirname(self.filepath)
-        for file in self.files:
-            filename = os.path.join(folder, file.name)
-            print(filename)
-            load(filename, use_avastar=self.use_avastar)
+        try:
+            for file in self.files:
+                filename = os.path.join(folder, file.name)
+                print(filename)
+                load(filename, use_avastar=self.use_avastar)
+        except Exception as e:
+             self.report({'ERROR'}, "Error loading %s: %s" % (filename, e))
         return {'FINISHED'}
 
 
@@ -467,4 +477,4 @@ def unregister():
 
 if __name__ == "__main__":
 #    register()
-    load('/home/tapple/Downloads/rider_rack.anim', use_avastar=True)
+    load('/home/tapple/cabbage/tanimbomb/scripts/AvCR33.anim', use_avastar=False)
