@@ -30,7 +30,8 @@ bl_info = {
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
                 "Scripts/Import-Export/BVH_Importer_Exporter",
     "support": 'COMMUNITY',
-    "category": "Import-Export"}
+    "category": "Import-Export",
+}
 
 import struct
 import math
