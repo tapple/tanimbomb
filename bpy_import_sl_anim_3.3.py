@@ -181,16 +181,26 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
-    def create_fcurves(self, action, dur, armature, nt=-0.002):
-        bone_rot = armature.data.bones[self.name].matrix_local.to_quaternion()
+    def create_fcurves(self, action, dur, armature, nt=-0.002, use_avastar=False):
+        name = self.name
+        if use_avastar and name[0] == "m":
+            name = name[1:]
+        try:
+            bone = armature.data.bones[name]
+        except KeyError: # try Avastar attach point bone
+            try:
+                bone = armature.data.bones["a" + name]
+            except KeyError:
+                raise KeyError("Unknown bone names: %s, a%s" % (name, name))
+        bone_rot = bone.matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
         if self.rotKeys.size:
-            data_path = ('pose.bones["%s"].rotation_quaternion' % self.name)
+            data_path = ('pose.bones["%s"].rotation_quaternion' % name)
             # print("data_path = %s" % data_path)
-            fw = action.fcurves.new(data_path, index=0, action_group=self.name)
-            fx = action.fcurves.new(data_path, index=1, action_group=self.name)
-            fy = action.fcurves.new(data_path, index=2, action_group=self.name)
-            fz = action.fcurves.new(data_path, index=3, action_group=self.name)
+            fw = action.fcurves.new(data_path, 0, name)
+            fx = action.fcurves.new(data_path, 1, name)
+            fy = action.fcurves.new(data_path, 2, name)
+            fz = action.fcurves.new(data_path, 3, name)
             qp = Quaternion((0, 0, 0, 0))
             negate = False
             for t, x, y, z in self.get_rotKeysF(dur):
@@ -212,11 +222,15 @@ class JointMotion(object):
                 fy.keyframe_points.insert(t, q.y)
                 fz.keyframe_points.insert(t, q.z)
         if self.locKeys.size:
-            data_path = 'pose.bones["%s"].location' % self.name
+            if use_avastar and self.name == "mPelvis":
+                name = "COG"
+                bone_rot = armature.data.bones[name].matrix_local.to_quaternion()
+                bone_rot_inv = bone_rot.inverted()
+            data_path = 'pose.bones["%s"].location' % name
             # print("data_path = %s" % data_path)
-            fx = action.fcurves.new(data_path, index=0, action_group=self.name)
-            fy = action.fcurves.new(data_path, index=1, action_group=self.name)
-            fz = action.fcurves.new(data_path, index=2, action_group=self.name)
+            fx = action.fcurves.new(data_path, 0, name)
+            fy = action.fcurves.new(data_path, 1, name)
+            fz = action.fcurves.new(data_path, 2, name)
             for t, x, y, z in self.get_locKeysF(dur):
                 # print("%ft %fx %fy %fz" % (t, x, y, z))
                 v = Vector((y, -x, z))
@@ -224,8 +238,8 @@ class JointMotion(object):
                 fx.keyframe_points.insert(t, v.x)
                 fy.keyframe_points.insert(t, v.y)
                 fz.keyframe_points.insert(t, v.z)
-        data_path = 'pose.bones["%s"]["priority"]' % self.name
-        f = action.fcurves.new(data_path, index=0, action_group=self.name)
+        data_path = 'pose.bones["%s"]["priority"]' % name
+        f = action.fcurves.new(data_path, index=0, action_group=name)
         f.keyframe_points.insert(0, self.priority)
 
     def __repr__(self):
@@ -348,7 +362,7 @@ class KeyframeMotion(object):
         for constraint in self.constraints:
             print(constraint.dump())
     
-    def create_action(self, name, armature):
+    def create_action(self, name, armature, use_avastar=False):
         print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
         armature.animation_data.action = action
@@ -374,7 +388,7 @@ class KeyframeMotion(object):
             anim_props.fps = self.frameRate
 
         for joint in self.joints:
-            joint.create_fcurves(action, self.duration * self.frameRate, armature)
+            joint.create_fcurves(action, self.duration * self.frameRate, armature, use_avastar=use_avastar)
         for cu in action.fcurves:
             for bez in cu.keyframe_points:
                 bez.interpolation = 'LINEAR'
@@ -416,7 +430,7 @@ def active_armature():
     raise RuntimeError("Please select an armature before importing")
 
 
-def load(filename, armature=None):
+def load(filename, armature=None, use_avastar=False):
     filepath = Path(filename)
     if not armature:
         armature = active_armature()
@@ -425,7 +439,7 @@ def load(filename, armature=None):
         anim.deserialize(file)
         # anim.summarize(file.name)
         # anim.dump()
-        print(anim.create_action(filepath.stem, armature))
+        print(anim.create_action(filepath.stem, armature, use_avastar=use_avastar))
 
 
 class ImportANIM(bpy.types.Operator, ImportHelper):
@@ -441,9 +455,13 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
 
     def execute(self, context):
         folder = os.path.dirname(self.filepath)
-        for file in self.files:
-            filename = os.path.join(folder, file.name)
-            load(filename)
+        try:
+            for file in self.files:
+                filename = os.path.join(folder, file.name)
+                print(filename)
+                load(filename, use_avastar=self.use_avastar)
+        except Exception as e:
+             self.report({'ERROR'}, "Error loading %s: %s" % (filename, e))
         return {'FINISHED'}
 
 
