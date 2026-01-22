@@ -100,7 +100,7 @@ class JointMotion(object):
     LOC_MAX = 5
 
     def __init__(self, name='', priority=0, *,
-            rotKeys=None, locKeys=None, rotKeysF=None, locKeysF=None):
+            rotKeys=None, locKeys=None, rotKeysF=None, locKeysF=None, rotKeysQ=None):
         self.name = name
         self.priority = priority
         self.rotKeys = rotKeys or []
@@ -109,6 +109,8 @@ class JointMotion(object):
             self.rotKeysF = rotKeysF
         if locKeysF is not None:
             self.locKeysF = locKeysF
+        if rotKeysQ is not None:
+            self.rotKeysQ = rotKeysQ
 
     @property
     def rotKeys(self):
@@ -150,6 +152,7 @@ class JointMotion(object):
 
     @rotKeysQ.setter
     def rotKeysQ(self, value):
+        value = np.rec.array(value, dtype=qkey)
         a = quaternion.as_float_array(value.q)
         sign = ((a[:, 0] >= 0) * 2 - 1)[:, np.newaxis]
         self.rotKeysF = np.concat((value.t[:, np.newaxis], a[:, 1:] * sign), axis=1)
