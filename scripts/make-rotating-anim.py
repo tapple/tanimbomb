@@ -4,7 +4,7 @@ import numpy as np
 
 JOINTS_NAMES = [
     "mPelvis",
-    # "mSpine1", "mSpine2", "mTorso", "mSpine3", "mSpine4", "mChest", "mNeck", "mHead", "mSkull", "mEyeLeft", "mEyeRight",
+    "mSpine1", "mSpine2", "mTorso", "mSpine3", "mSpine4", "mChest", "mNeck", "mHead", "mSkull", "mEyeLeft", "mEyeRight",
     # "mCollarLeft", "mShoulderLeft", "mElbowLeft", "mWristLeft",
     # "mCollarRight", "mShoulderRight", "mElbowRight", "mWristRight",
     # "mWingsRoot", "mGroin", "mHindLimbsRoot",

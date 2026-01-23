@@ -192,52 +192,66 @@ class JointMotion(object):
                 bone = armature.data.bones["a" + name]
             except KeyError:
                 raise KeyError("Unknown bone names: %s, a%s" % (name, name))
+        self.create_rot_fcurves(action, bone, dur, nt)
+        self.create_priority_fcurves(action, bone)
+        if use_avastar and self.name == "mPelvis":
+            bone = armature.data.bones["COG"]
+            self.create_priority_fcurves(action, bone)
+        self.create_loc_fcurves(action, bone, dur)
+
+    def create_rot_fcurves(self, action, bone, dur, nt=-0.002):
+        if self.rotKeys.size == 0:
+            return
+        name = bone.name
         bone_rot = bone.matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
-        if self.rotKeys.size:
-            data_path = ('pose.bones["%s"].rotation_quaternion' % name)
-            # print("data_path = %s" % data_path)
-            fw = action.fcurves.new(data_path, 0, name)
-            fx = action.fcurves.new(data_path, 1, name)
-            fy = action.fcurves.new(data_path, 2, name)
-            fz = action.fcurves.new(data_path, 3, name)
-            qp = Quaternion((0, 0, 0, 0))
-            negate = False
-            for t, x, y, z in self.get_rotKeysF(dur):
-                w2 = 1 - x*x - y*y - z*z
-                w = math.sqrt(w2) if w2 > 0 else 0
-                # print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
-                q = Quaternion((w, y, -x, z))
-                q = bone_rot_inv * q * bone_rot
-                # if less than nt (negation threshold), than both sign changed,
-                # and both items were abs > 0.05
-                if q.x*qp.x < nt and q.y*qp.y < nt and q.z*qp.z < nt:
-                    # print("negating bone %s at t=%f" % (self.name, t))
-                    negate = not negate
-                qp = q
-                if negate:
-                    q = -q
-                fw.keyframe_points.insert(t, q.w)
-                fx.keyframe_points.insert(t, q.x)
-                fy.keyframe_points.insert(t, q.y)
-                fz.keyframe_points.insert(t, q.z)
-        if self.locKeys.size:
-            if use_avastar and self.name == "mPelvis":
-                name = "COG"
-                bone_rot = armature.data.bones[name].matrix_local.to_quaternion()
-                bone_rot_inv = bone_rot.inverted()
-            data_path = 'pose.bones["%s"].location' % name
-            # print("data_path = %s" % data_path)
-            fx = action.fcurves.new(data_path, 0, name)
-            fy = action.fcurves.new(data_path, 1, name)
-            fz = action.fcurves.new(data_path, 2, name)
-            for t, x, y, z in self.get_locKeysF(dur):
-                # print("%ft %fx %fy %fz" % (t, x, y, z))
-                v = Vector((y, -x, z))
-                v.rotate(bone_rot_inv)
-                fx.keyframe_points.insert(t, v.x)
-                fy.keyframe_points.insert(t, v.y)
-                fz.keyframe_points.insert(t, v.z)
+        data_path = ('pose.bones["%s"].rotation_quaternion' % name)
+        # print("data_path = %s" % data_path)
+        fw = action.fcurves.new(data_path, index=0, action_group=name)
+        fx = action.fcurves.new(data_path, index=1, action_group=name)
+        fy = action.fcurves.new(data_path, index=2, action_group=name)
+        fz = action.fcurves.new(data_path, index=3, action_group=yname)
+        qp = Quaternion((0, 0, 0, 0))
+        negate = False
+        for t, x, y, z in self.get_rotKeysF(dur):
+            w2 = 1 - x*x - y*y - z*z
+            w = math.sqrt(w2) if w2 > 0 else 0
+            # print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
+            q = Quaternion((w, y, -x, z))
+            q = bone_rot_inv * q * bone_rot
+            # if less than nt (negation threshold), than both sign changed,
+            # and both items were abs > 0.05
+            if q.x*qp.x < nt and q.y*qp.y < nt and q.z*qp.z < nt:
+                # print("negating bone %s at t=%f" % (self.name, t))
+                negate = not negate
+            qp = q
+            if negate:
+                q = -q
+            fw.keyframe_points.insert(t, q.w)
+            fx.keyframe_points.insert(t, q.x)
+            fy.keyframe_points.insert(t, q.y)
+            fz.keyframe_points.insert(t, q.z)
+
+    def create_loc_fcurves(self, action, bone, dur):
+        if self.locKeys.size == 0:
+            return
+        name = bone.name
+        bone_rot = bone.matrix_local.to_quaternion()
+        bone_rot_inv = bone_rot.inverted()
+        data_path = 'pose.bones["%s"].location' % name
+        # print("data_path = %s" % data_path)
+        fx = action.fcurves.new(data_path, index=0, action_group=name)
+        fy = action.fcurves.new(data_path, index=1, action_group=name)
+        fz = action.fcurves.new(data_path, index=2, action_group=name)
+        for t, x, y, z in self.get_locKeysF(dur):
+            # print("%ft %fx %fy %fz" % (t, x, y, z))
+            v = Vector((y, -x, z))
+            v.rotate(bone_rot_inv)
+            fx.keyframe_points.insert(t, v.x)
+            fy.keyframe_points.insert(t, v.y)
+            fz.keyframe_points.insert(t, v.z)
+
+    def create_priority_fcurves(self, action, bone):
         data_path = 'pose.bones["%s"]["priority"]' % name
         f = action.fcurves.new(data_path, index=0, action_group=name)
         f.keyframe_points.insert(0, self.priority)
@@ -365,7 +379,7 @@ class KeyframeMotion(object):
     def create_action(self, name, armature, use_avastar=False):
         print("create_action(%s)" % name)
         action = bpy.data.actions.new(name=name)
-        armature.animation_data.action = action
+        armature.animation_data_create().action = action
 
         try:
             anim_props = action.AnimProps  # avastar 2.*
@@ -489,33 +503,22 @@ def unregister():
     except AttributeError:
         bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)  # bpy 3.3
 
+def load_test(filename):
+    """ load onto test armature, disregarding bone names """
+    filepath = Path(filename)
+    with open(filepath, 'rb') as file:
+        anim = KeyframeMotion()
+        anim.deserialize(file)
+    armature = active_armature()
+    action = bpy.data.actions.new(name=filepath.stem)
+    armature.animation_data_create().action = action
+    for bone in armature.data.bones:
+        if bone.name in ["Root"]:
+            continue 
+        anim.joints[0].create_loc_fcurves(action, bone, anim.duration * anim.frameRate)
+    
 if __name__ == "__main__":
 #    register()
-    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Animation Tab/TH_lay1.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_roll1.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/face_stripped_horse_anims/TH_sit3.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-x.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-y.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/body1 mPelvis-z.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-x.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-y.anim')
-#    load('Z:/fridge/blender-offline/quad/bc/Teeglepet/ripped anims/Joint Testing HUD/classic/legL1 mHipLeft-z.anim')
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_x.anim')
+    load_test('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_y.anim')
 
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_rot_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mPelvis_loc_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipLeft_loc_z.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_x.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_y.anim')
-#    load('C:/Users/TAPPL/cabbage/tanimbomb/scripts/mHipRight_loc_z.anim')
