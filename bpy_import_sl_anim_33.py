@@ -181,31 +181,30 @@ class JointMotion(object):
         stream.pack("i", len(self.locKeys))
         self.serialize_keys(stream, self.locKeys)
 
-    def create_fcurves(self, action, dur, armature, nt=-0.002, use_avastar=False):
+    def create_fcurves(self, action, dur, armature, nt=-0.8, use_avastar=False):
         name = self.name
         if use_avastar and name[0] == "m":
             name = name[1:]
         try:
-            bone = armature.data.bones[name]
+            bone = armature.pose.bones[name]
         except KeyError: # try Avastar attach point bone
             try:
-                bone = armature.data.bones["a" + name]
+                bone = armature.pose.bones["a" + name]
             except KeyError:
                 raise KeyError("Unknown bone names: %s, a%s" % (name, name))
-        self.create_rot_fcurves(action, bone, dur, nt)
+        self.create_rot_fcurves(action, armature, bone, dur, nt)
         self.create_priority_fcurves(action, bone)
         if use_avastar and self.name == "mPelvis":
-            bone = armature.data.bones["COG"]
+            bone = armature.pose.bones["COG"]
             self.create_priority_fcurves(action, bone)
-        self.create_loc_fcurves(action, bone, dur)
+        self.create_loc_fcurves(action, armature, bone, dur)
 
-    def create_rot_fcurves(self, action, bone, dur, nt=-0.002):
+    def create_rot_fcurves(self, action, armature, bone, dur, nt=-0.8):
         if self.rotKeys.size == 0:
             return
         name = bone.name
-        bone_rot = bone.matrix_local.to_quaternion()
-        bone_rot_inv = bone_rot.inverted()
-        print("bone_rot: %s; bone_rot_inv: %s" % (bone_rot, bone_rot_inv))
+        bone_rot_inv = armature.convert_space(pose_bone=bone, matrix=Matrix.Identity(4),
+            from_space="WORLD", to_space="POSE").to_quaternion()
         data_path = ('pose.bones["%s"].rotation_quaternion' % name)
         # print("data_path = %s" % data_path)
         fw = action.fcurves.new(data_path, index=0, action_group=name)
@@ -217,14 +216,14 @@ class JointMotion(object):
         for t, x, y, z in self.get_rotKeysF(dur):
             w2 = 1 - x*x - y*y - z*z
             w = math.sqrt(w2) if w2 > 0 else 0
-            print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
+            #print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
             q = Quaternion((w, y, -x, z))
-            print("%ft %s unrotated" % (t, q))
-            q.rotate(bone_rot)
-            print("%ft %s rotated" % (t, q))
+            #print("%ft %s unrotated" % (t, q))
+            q.rotate(bone_rot_inv)
+            #print("%ft %s rotated" % (t, q))
             # if less than nt (negation threshold), than both sign changed,
             # and both items were abs > 0.05
-            if q.x*qp.x < nt and q.y*qp.y < nt and q.z*qp.z < nt:
+            if q.x*qp.x < nt or q.y*qp.y < nt or q.z*qp.z < nt:
                 print("negating bone %s at t=%f" % (self.name, t))
                 negate = not negate
             qp = q
@@ -235,14 +234,14 @@ class JointMotion(object):
             fy.keyframe_points.insert(t, q.y)
             fz.keyframe_points.insert(t, q.z)
 
-    def create_loc_fcurves(self, action, bone, dur):
+    def create_loc_fcurves(self, action, armature, bone, dur):
         if self.locKeys.size == 0:
             return
         name = bone.name
-        bone_rot = bone.matrix_local.to_quaternion()
-        bone_rot_inv = bone_rot.inverted()
+        bone_rot_inv = armature.convert_space(pose_bone=bone, matrix=Matrix.Identity(4),
+            from_space="WORLD", to_space="LOCAL").to_quaternion()
         data_path = 'pose.bones["%s"].location' % name
-        # print("data_path = %s" % data_path)
+        print("data_path = %s" % data_path)
         fx = action.fcurves.new(data_path, index=0, action_group=name)
         fy = action.fcurves.new(data_path, index=1, action_group=name)
         fz = action.fcurves.new(data_path, index=2, action_group=name)
@@ -470,6 +469,9 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
     filter_glob: StringProperty(default="*.anim", options={'HIDDEN', 'SKIP_SAVE'})
     # directory = bpy.props.StringProperty(maxlen=1024, subtype='FILE_PATH', options={'HIDDEN', 'SKIP_SAVE'})
     files: CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
+    use_avastar = bpy.props.BoolProperty(
+        name="Avastar Control", description="Import the animations onto "
+        "Avastar's control bones, rather than the raw deformation bones")
 
     def execute(self, context):
         folder = os.path.dirname(self.filepath)
@@ -488,7 +490,6 @@ def menu_func_import(self, context):
 
 def register():
     print(f"{__name__}.register()")
-    print("hello")
     # bpy.utils.register_module(__name__)
     # bpy.utils.register_module(__name__)
     bpy.utils.register_class(ImportANIM)
@@ -522,14 +523,14 @@ def load_test(filename):
         anim.joints[0].create_loc_fcurves(action, bone, anim.duration * anim.frameRate)
     
 if __name__ == "__main__":
-#    register()
+    register()
 #    load('/home/tapple/cabbage/tanimbomb/scripts/deer_dance.anim', use_avastar=True)
-    load('/home/tapple/cabbage/tanimbomb/scripts/deer_dance_torsoonly.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/deer_dance_torsoonly.anim', use_avastar=True)
 #    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_x.anim', use_avastar=True)
 #    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_y.anim', use_avastar=True)
 #    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_z.anim', use_avastar=True)
 #    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_x.anim', use_avastar=True)
 #    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_y.anim', use_avastar=True)
-#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_z.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mPelvis_loc_x.anim', use_avastar=True)
 #    load_test('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_y.anim')
 
