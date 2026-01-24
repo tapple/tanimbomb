@@ -1,5 +1,5 @@
 # To install, download this file, and in blender, do Preferences > Add-ons > Install Add-on from File
-# BROKEN. Supposed to work in Blender 2.8 - 3.3, and maybe above
+# Works in Blender 2.8 - 3.3, and maybe above
 
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
