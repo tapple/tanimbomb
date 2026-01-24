@@ -205,24 +205,27 @@ class JointMotion(object):
         name = bone.name
         bone_rot = bone.matrix_local.to_quaternion()
         bone_rot_inv = bone_rot.inverted()
+        print("bone_rot: %s; bone_rot_inv: %s" % (bone_rot, bone_rot_inv))
         data_path = ('pose.bones["%s"].rotation_quaternion' % name)
         # print("data_path = %s" % data_path)
         fw = action.fcurves.new(data_path, index=0, action_group=name)
         fx = action.fcurves.new(data_path, index=1, action_group=name)
         fy = action.fcurves.new(data_path, index=2, action_group=name)
-        fz = action.fcurves.new(data_path, index=3, action_group=yname)
+        fz = action.fcurves.new(data_path, index=3, action_group=name)
         qp = Quaternion((0, 0, 0, 0))
         negate = False
         for t, x, y, z in self.get_rotKeysF(dur):
             w2 = 1 - x*x - y*y - z*z
             w = math.sqrt(w2) if w2 > 0 else 0
-            # print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
+            print("%ft %fw %fx %fy %fz" % (t, w, x, y, z))
             q = Quaternion((w, y, -x, z))
-            q = bone_rot_inv * q * bone_rot
+            print("%ft %s unrotated" % (t, q))
+            q.rotate(bone_rot)
+            print("%ft %s rotated" % (t, q))
             # if less than nt (negation threshold), than both sign changed,
             # and both items were abs > 0.05
             if q.x*qp.x < nt and q.y*qp.y < nt and q.z*qp.z < nt:
-                # print("negating bone %s at t=%f" % (self.name, t))
+                print("negating bone %s at t=%f" % (self.name, t))
                 negate = not negate
             qp = q
             if negate:
@@ -252,6 +255,7 @@ class JointMotion(object):
             fz.keyframe_points.insert(t, v.z)
 
     def create_priority_fcurves(self, action, bone):
+        name = bone.name
         data_path = 'pose.bones["%s"]["priority"]' % name
         f = action.fcurves.new(data_path, index=0, action_group=name)
         f.keyframe_points.insert(0, self.priority)
@@ -401,7 +405,7 @@ class KeyframeMotion(object):
             anim_props.Hand_Posture = str(self.handPosture)
             anim_props.fps = self.frameRate
 
-        for joint in self.joints:
+        for joint in sorted(self.joints, key=lambda joint: joint.name):
             joint.create_fcurves(action, self.duration * self.frameRate, armature, use_avastar=use_avastar)
         for cu in action.fcurves:
             for bez in cu.keyframe_points:
@@ -519,6 +523,13 @@ def load_test(filename):
     
 if __name__ == "__main__":
 #    register()
-#    load('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_x.anim')
-    load_test('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_y.anim')
+#    load('/home/tapple/cabbage/tanimbomb/scripts/deer_dance.anim', use_avastar=True)
+    load('/home/tapple/cabbage/tanimbomb/scripts/deer_dance_torsoonly.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_x.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_y.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_rot_z.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_x.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_y.anim', use_avastar=True)
+#    load('/home/tapple/cabbage/tanimbomb/scripts/mTorso_loc_z.anim', use_avastar=True)
+#    load_test('/home/tapple/cabbage/tanimbomb/scripts/mHead_loc_y.anim')
 
