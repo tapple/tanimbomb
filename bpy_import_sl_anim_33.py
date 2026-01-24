@@ -469,7 +469,7 @@ class ImportANIM(bpy.types.Operator, ImportHelper):
     filter_glob: StringProperty(default="*.anim", options={'HIDDEN', 'SKIP_SAVE'})
     # directory = bpy.props.StringProperty(maxlen=1024, subtype='FILE_PATH', options={'HIDDEN', 'SKIP_SAVE'})
     files: CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN', 'SKIP_SAVE'})
-    use_avastar = bpy.props.BoolProperty(
+    use_avastar: bpy.props.BoolProperty(
         name="Avastar Control", description="Import the animations onto "
         "Avastar's control bones, rather than the raw deformation bones")
 
@@ -489,24 +489,13 @@ def menu_func_import(self, context):
     self.layout.operator(ImportANIM.bl_idname, text="SL Animation (.anim)")
 
 def register():
-    print(f"{__name__}.register()")
-    # bpy.utils.register_module(__name__)
-    # bpy.utils.register_module(__name__)
     bpy.utils.register_class(ImportANIM)
-    try:
-        bpy.types.INFO_MT_file_import.append(menu_func_import)  # bpy 2.79
-    except AttributeError:
-        bpy.types.TOPBAR_MT_file_import.append(menu_func_import)  # bpy 3.3
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 
 def unregister():
-    print(f"{__name__}.unregister()")
-    # bpy.utils.unregister_module(__name__)
     bpy.utils.unregister_class(ImportANIM)
-    try:
-        bpy.types.INFO_MT_file_import.remove(menu_func_import)  # bpy 2.79
-    except AttributeError:
-        bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)  # bpy 3.3
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
 def load_test(filename):
     """ load onto test armature, disregarding bone names """
