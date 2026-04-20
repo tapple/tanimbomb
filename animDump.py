@@ -1052,6 +1052,9 @@ File extension will be appended automatically""")
     0.5 for double speed/half duration""")
     parser.add_argument('--frame-rate', '--fps', action=AppendObjectAction,
                         dest='actions', func=SetFrameRate, nargs=1, type=int)
+    parser.add_argument('--duration', '--dur', action=AppendObjectAction,
+                        dest='actions', func=SetAnimProperty, nargs=1,
+                        key='duration', type=float, help="Set duration, in seconds")
     parser.add_argument('--offset', '--adjust', action=AppendObjectAction,
             dest='actions', func=XYZTransformJointsMatching, nargs='+',
             transform_func=offset_joint, starting_globs=("mPelvis",),
